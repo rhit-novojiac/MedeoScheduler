@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "esnext",
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "noImplicitAny": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "outDir": "dist",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "strictNullChecks": true,
+    "paths": {
+      "@/*": [
+        "./src/renderer/src/*"
+      ],
+      "@preload/*": [
+        "./src/preload/*"
+      ]
+    },
+    "resolveJsonModule": true
+  }
+}
