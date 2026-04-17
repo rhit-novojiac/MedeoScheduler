@@ -167,7 +167,7 @@ export const runMigrations = () => {
     `);
 
   const row = db.prepare('SELECT version FROM schema_version').get() as { version: number };
-  let currentVersion = row.version;
+  const currentVersion = row.version;
 
   const pending = MIGRATIONS.filter(m => m.version > currentVersion);
 

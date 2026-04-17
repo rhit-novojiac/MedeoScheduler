@@ -52,7 +52,6 @@ export const useUpdateClassSession = () => {
     return useMutation({
         mutationFn: async ({
             session,
-            date,
         }: {
             session: Pick<ClassSession, 'id' | 'name' | 'class_type_id' | 'start_time' | 'duration_minutes'>;
             date: string;

@@ -1,24 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useClassSessionsByDate, useDeleteClassSession, useUpdateClassSession } from '../../hooks/useClassSessions';
 import { useSpecialEventsByDate, useDeleteSpecialEvent } from '../../hooks/useSpecialEvents';
 import { useClassTypes } from '../../hooks/useClassTypes';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Users, Clock, Plus, Trash2, Pencil } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Calendar as CalendarIcon, Clock, Plus, Trash2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal } from 'lucide-react';
 import { AttendanceSheet } from './AttendanceSheet';
 import { AddSessionDialog } from './AddSessionDialog';
 import { AddEventDialog } from './AddEventDialog';
-import { formatTime } from '@/lib/utils';
-import type { ClassSession, ClassType } from '@preload/index';
+import type { ClassSession } from '@preload/index';
 import { SessionCard } from './SessionCard';
 
 // ---------------------------------------------------------------------------

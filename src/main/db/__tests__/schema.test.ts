@@ -4,12 +4,12 @@ import * as dbConnection from '../connection';
 import Database from 'better-sqlite3';
 
 vi.mock('better-sqlite3', () => {
-    let memory: any[] = [];
+    const memory: any[] = [];
     class MockDatabase {
         exec = vi.fn();
         pragma = vi.fn(() => [{ name: 'dummy_column' }]);
         transaction = vi.fn((fn: any) => () => fn());
-        prepare = vi.fn((query: string) => ({
+        prepare = vi.fn(() => ({
             get: vi.fn(() => ({ version: 0, value: 'hash' })),
             run: vi.fn((...args) => { memory.push(args); }),
             all: vi.fn(() => [])

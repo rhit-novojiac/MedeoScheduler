@@ -52,7 +52,7 @@ export const useUpdateSpecialEvent = () => {
 export const useDeleteSpecialEvent = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async ({ id, date }: { id: number; date: string }) => {
+        mutationFn: async ({ id }: { id: number; date: string }) => {
             const result = await window.api.deleteSpecialEvent(id);
             if (!result.success) throw new Error(result.error);
             return result.data;

@@ -8,7 +8,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { useCreateSpecialEvent } from '../../hooks/useSpecialEvents';
 import { useClassSessionsByDate } from '../../hooks/useClassSessions';
-import type { ClassSession } from '@preload/index';
 
 interface AddEventDialogProps {
     open: boolean;

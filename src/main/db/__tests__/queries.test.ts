@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import { runMigrations } from '../schema';
-import * as dbConnection from '../connection';
 
 // Provide a stateful mock for better-sqlite3 so tests run without native bindings
 vi.mock('better-sqlite3', () => {
