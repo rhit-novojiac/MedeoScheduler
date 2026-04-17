@@ -5,10 +5,15 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Pencil } from 'lucide-react';
+import { MoreHorizontal, Pencil, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Fencer } from '@preload/index';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 /** Binary sex toggle — two buttons, Male or Female */
 const SexToggle = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
@@ -30,9 +35,11 @@ const SexToggle = ({ value, onChange }: { value: string; onChange: (v: string) =
     </div>
 );
 
-// A sub-component to handle per-row edit state
-const FencerRowActions = ({ fencer, onUpdate }: { fencer: Fencer; onUpdate: (data: any) => Promise<unknown> }) => {
+// ---------------------------------------------------------------------------
+// Fencer Row Actions
+// ---------------------------------------------------------------------------
 
+const FencerRowActions = ({ fencer, onUpdate }: { fencer: Fencer; onUpdate: (data: Fencer) => Promise<unknown> }) => {
     const [editOpen, setEditOpen] = useState(false);
     const [firstName, setFirstName] = useState(fencer.first_name);
     const [lastName, setLastName] = useState(fencer.last_name);
@@ -44,7 +51,6 @@ const FencerRowActions = ({ fencer, onUpdate }: { fencer: Fencer; onUpdate: (dat
     const [isEpee, setIsEpee] = useState(fencer.is_epee === 1);
     const [isSaber, setIsSaber] = useState(fencer.is_saber === 1);
 
-    // Reset when fencer prop changes or modal closes
     useEffect(() => {
         if (!editOpen) return;
         setFirstName(fencer.first_name);
@@ -120,23 +126,26 @@ const FencerRowActions = ({ fencer, onUpdate }: { fencer: Fencer; onUpdate: (dat
                             <SexToggle value={sex} onChange={setSex} />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="renewalEdit" className="text-right">Membership Renewal</Label>
+                            <Label htmlFor="renewalEdit" className="text-right">Renewal</Label>
                             <Input id="renewalEdit" type="date" value={lastMembershipRenewal} onChange={e => setLastMembershipRenewal(e.target.value)} className="col-span-3" />
                         </div>
-
                         <div className="grid grid-cols-4 items-center gap-4 mt-2">
                             <Label className="text-right">Weapons</Label>
                             <div className="col-span-3 flex gap-4">
-                                <label className="flex items-center gap-2 cursor-pointer select-none"><input type="checkbox" checked={isFoil} onChange={(e) => setIsFoil(e.target.checked)} className="cursor-pointer" />Foil</label>
-                                <label className="flex items-center gap-2 cursor-pointer select-none"><input type="checkbox" checked={isEpee} onChange={(e) => setIsEpee(e.target.checked)} className="cursor-pointer" />Epee</label>
-                                <label className="flex items-center gap-2 cursor-pointer select-none"><input type="checkbox" checked={isSaber} onChange={(e) => setIsSaber(e.target.checked)} className="cursor-pointer" />Saber</label>
+                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                    <input type="checkbox" checked={isFoil} onChange={e => setIsFoil(e.target.checked)} className="cursor-pointer" /> Foil
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                    <input type="checkbox" checked={isEpee} onChange={e => setIsEpee(e.target.checked)} className="cursor-pointer" /> Epee
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                    <input type="checkbox" checked={isSaber} onChange={e => setIsSaber(e.target.checked)} className="cursor-pointer" /> Saber
+                                </label>
                             </div>
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button type="submit">
-                            Save Changes
-                        </Button>
+                        <Button type="submit">Save Changes</Button>
                     </DialogFooter>
                 </form>
             </DialogContent>
@@ -144,166 +153,225 @@ const FencerRowActions = ({ fencer, onUpdate }: { fencer: Fencer; onUpdate: (dat
     );
 };
 
+// ---------------------------------------------------------------------------
+// Fencers Manager (Main)
+// ---------------------------------------------------------------------------
+
 export const FencersManager = () => {
-    const { data: fencers, isLoading, isError } = useFencers();
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 12;
+
+    const { data: fencersData, isLoading, isError } = useFencers(currentPage, pageSize);
+    const fencers = fencersData?.items ?? [];
+    const totalFencers = fencersData?.total ?? 0;
+
     const createFencer = useCreateFencer();
     const updateFencer = useUpdateFencer();
 
-    // form state
+    // Add Fencer Form State
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [yearOfBirth, setYearOfBirth] = useState('');
     const [usafId, setUsafId] = useState('');
     const [isFoil, setIsFoil] = useState(false);
-    const [isEpee, setIsEpee] = useState(false);
+    const [isEpee, setIsEpee] = useState(true);
     const [isSaber, setIsSaber] = useState(false);
     const [sex, setSex] = useState('M');
     const [lastMembershipRenewal, setLastMembershipRenewal] = useState('');
 
-    const [open, setOpen] = useState(false);
+    const [addOpen, setAddOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         await createFencer.mutateAsync({
             first_name: firstName,
             last_name: lastName,
             year_of_birth: parseInt(yearOfBirth) || 2000,
             usaf_id: parseInt(usafId) || 0,
-            sex: sex || null,
+            sex,
             last_membership_renewal: lastMembershipRenewal || null,
             is_foil: isFoil ? 1 : 0,
             is_epee: isEpee ? 1 : 0,
             is_saber: isSaber ? 1 : 0
         });
-        setOpen(false);
-        // reset fields
-        setFirstName(''); setLastName(''); setYearOfBirth(''); setUsafId(''); setSex('M'); setLastMembershipRenewal(''); setIsFoil(false); setIsEpee(false); setIsSaber(false);
+        setAddOpen(false);
+        // Reset
+        setFirstName(''); setLastName(''); setYearOfBirth(''); setUsafId(''); setLastMembershipRenewal('');
     };
 
+    // Filtering logic (client-side filter on current page only for now, 
+    // real search would need backend support)
+    const filteredFencers = fencers.filter(f => {
+        const q = searchTerm.toLowerCase().trim();
+        if (!q) return true;
+        return (
+            f.first_name.toLowerCase().includes(q) ||
+            f.last_name.toLowerCase().includes(q) ||
+            f.usaf_id.toString().includes(q) ||
+            f.year_of_birth.toString().includes(q)
+        );
+    });
+
+    // Reset pagination on search
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
+
+    const totalPages = Math.ceil(totalFencers / pageSize) || 1;
+
     return (
-        <div className="p-6 space-y-6">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Fencers Directory</h2>
-                    <p className="text-muted-foreground">Manage your club members and fencers.</p>
+        <Card className="h-full flex flex-col shadow-sm border-border/60">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 bg-muted/20 border-b shrink-0">
+                <div className="space-y-1">
+                    <CardTitle className="text-xl font-bold tracking-tight">Fencer Registry</CardTitle>
+                    <CardDescription>View and manage club members.</CardDescription>
                 </div>
-
-                <Dialog open={open} onOpenChange={setOpen}>
-                    <DialogTrigger asChild>
-                        <Button>Add Fencer</Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                        <form onSubmit={handleSubmit}>
-                            <DialogHeader>
-                                <DialogTitle>Add New Fencer</DialogTitle>
-                                <DialogDescription>Enter the fencer's details below.</DialogDescription>
-                            </DialogHeader>
-                            <div className="grid gap-4 py-4">
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="firstName" className="text-right">First Name</Label>
-                                    <Input id="firstName" value={firstName} onChange={e => setFirstName(e.target.value)} className="col-span-3" required />
-                                </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="lastName" className="text-right">Last Name</Label>
-                                    <Input id="lastName" value={lastName} onChange={e => setLastName(e.target.value)} className="col-span-3" required />
-                                </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="usafId" className="text-right">USAF ID</Label>
-                                    <Input id="usafId" type="number" value={usafId} onChange={e => setUsafId(e.target.value)} className="col-span-3" placeholder="USA Fencing member ID" required />
-                                </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="yob" className="text-right">Birth Year</Label>
-                                    <Input id="yob" type="number" value={yearOfBirth} onChange={e => setYearOfBirth(e.target.value)} className="col-span-3" required />
-                                </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label className="text-right">Sex</Label>
-                                    <SexToggle value={sex} onChange={setSex} />
-                                </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="renewal" className="text-right">Membership Renewal</Label>
-                                    <Input id="renewal" type="date" value={lastMembershipRenewal} onChange={e => setLastMembershipRenewal(e.target.value)} className="col-span-3" />
-                                </div>
-
-                                <div className="grid grid-cols-4 items-center gap-4 mt-2">
-                                    <Label className="text-right">Weapons</Label>
-                                    <div className="col-span-3 flex gap-4">
-                                        <label className="flex items-center gap-2 cursor-pointer select-none"><input type="checkbox" checked={isFoil} onChange={(e) => setIsFoil(e.target.checked)} className="cursor-pointer" />Foil</label>
-                                        <label className="flex items-center gap-2 cursor-pointer select-none"><input type="checkbox" checked={isEpee} onChange={(e) => setIsEpee(e.target.checked)} className="cursor-pointer" />Epee</label>
-                                        <label className="flex items-center gap-2 cursor-pointer select-none"><input type="checkbox" checked={isSaber} onChange={(e) => setIsSaber(e.target.checked)} className="cursor-pointer" />Saber</label>
+                <div className="flex items-center gap-4">
+                    <div className="relative">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search fencers..."
+                            className="pl-9 w-[200px] lg:w-[300px] h-9"
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <Dialog open={addOpen} onOpenChange={setAddOpen}>
+                        <DialogTrigger asChild>
+                            <Button size="sm">Add Fencer</Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <form onSubmit={handleCreate}>
+                                <DialogHeader>
+                                    <DialogTitle>Add New Fencer</DialogTitle>
+                                    <DialogDescription>Create a new record in the database.</DialogDescription>
+                                </DialogHeader>
+                                <div className="grid gap-4 py-4">
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="fName" className="text-right">First Name</Label>
+                                        <Input id="fName" value={firstName} onChange={e => setFirstName(e.target.value)} className="col-span-3" required />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="lName" className="text-right">Last Name</Label>
+                                        <Input id="lName" value={lastName} onChange={e => setLastName(e.target.value)} className="col-span-3" required />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="uId" className="text-right">USAF ID</Label>
+                                        <Input id="uId" type="number" value={usafId} onChange={e => setUsafId(e.target.value)} className="col-span-3" required />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="yob" className="text-right">Birth Year</Label>
+                                        <Input id="yob" type="number" value={yearOfBirth} onChange={e => setYearOfBirth(e.target.value)} className="col-span-3" required />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label className="text-right">Sex</Label>
+                                        <SexToggle value={sex} onChange={setSex} />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="renew" className="text-right">Renewal</Label>
+                                        <Input id="renew" type="date" value={lastMembershipRenewal} onChange={e => setLastMembershipRenewal(e.target.value)} className="col-span-3" />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4 mt-2">
+                                        <Label className="text-right">Weapons</Label>
+                                        <div className="col-span-3 flex gap-4">
+                                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                <input type="checkbox" checked={isFoil} onChange={e => setIsFoil(e.target.checked)} /> Foil
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                <input type="checkbox" checked={isEpee} onChange={e => setIsEpee(e.target.checked)} /> Epee
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                <input type="checkbox" checked={isSaber} onChange={e => setIsSaber(e.target.checked)} /> Saber
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <DialogFooter>
-                                <Button type="submit" disabled={createFencer.isPending}>
-                                    {createFencer.isPending ? 'Saving...' : 'Save Fencer'}
-                                </Button>
-                            </DialogFooter>
-                        </form>
-                    </DialogContent>
-                </Dialog>
-            </div>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>All Fencers</CardTitle>
-                    <CardDescription>A list of everyone registered in the system.</CardDescription>
-                </CardHeader>
-                <CardContent>
+                                <DialogFooter>
+                                    <Button type="submit" disabled={createFencer.isPending}>
+                                        {createFencer.isPending ? 'Saving...' : 'Save Fencer'}
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+            </CardHeader>
+            <CardContent className="flex-1 p-0 flex flex-col min-h-0">
+                <div className="flex-1 overflow-auto">
                     {isLoading ? (
-                        <div className="flex justify-center items-center py-8">
-                            <span className="animate-pulse text-muted-foreground">Loading fencers...</span>
-                        </div>
+                        <div className="flex justify-center py-8"><span className="animate-pulse text-muted-foreground text-sm">Working...</span></div>
                     ) : isError ? (
-                        <p className="text-destructive p-4 text-center">Failed to load fencers.</p>
-                    ) : !fencers || fencers.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-8 border border-dashed rounded-xl bg-muted/20 gap-3">
-                            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                                <span className="text-xl">⚔️</span>
-                            </div>
-                            <p className="text-muted-foreground font-medium text-lg">No fencers found</p>
-                            <p className="text-sm text-muted-foreground mb-4">Add your first fencer to get started.</p>
-                            <Button variant="outline" onClick={() => setOpen(true)}>Add Fencer</Button>
-                        </div>
+                        <p className="text-destructive p-4 text-sm text-center">Load failed.</p>
+                    ) : filteredFencers.length === 0 ? (
+                        <div className="p-12 text-center text-muted-foreground italic text-sm">No fencers found.</div>
                     ) : (
-                        <div className="rounded-md border border-border">
-                            <Table>
-                                <TableHeader className="bg-muted/50">
-                                    <TableRow>
-                                        <TableHead>Name</TableHead>
-                                        <TableHead>USAF ID</TableHead>
-                                        <TableHead>Year of Birth</TableHead>
-                                        <TableHead>Sex</TableHead>
-                                        <TableHead>Renewal Date</TableHead>
-                                        <TableHead>Weapons</TableHead>
-                                        <TableHead className="w-[60px]"></TableHead>
+                        <Table>
+                            <TableHeader className="bg-muted/30 sticky top-0 z-10 backdrop-blur-sm">
+                                <TableRow>
+                                    <TableHead>Name</TableHead>
+                                    <TableHead>Sex</TableHead>
+                                    <TableHead>YOB</TableHead>
+                                    <TableHead>USAF ID</TableHead>
+                                    <TableHead>Renewal</TableHead>
+                                    <TableHead>Weapons</TableHead>
+                                    <TableHead className="w-[50px]"></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredFencers.map(f => (
+                                    <TableRow key={f.id} className="hover:bg-muted/5">
+                                        <TableCell className="font-medium">{f.first_name} {f.last_name}</TableCell>
+                                        <TableCell>{f.sex || '—'}</TableCell>
+                                        <TableCell>{f.year_of_birth}</TableCell>
+                                        <TableCell className="font-mono text-xs">{f.usaf_id}</TableCell>
+                                        <TableCell className="text-xs text-muted-foreground">{f.last_membership_renewal || '—'}</TableCell>
+                                        <TableCell>
+                                            <div className="flex gap-1">
+                                                {f.is_foil === 1 && <Badge variant="outline" className="px-1 text-[10px] h-4">F</Badge>}
+                                                {f.is_epee === 1 && <Badge variant="outline" className="px-1 text-[10px] h-4">E</Badge>}
+                                                {f.is_saber === 1 && <Badge variant="outline" className="px-1 text-[10px] h-4">S</Badge>}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <FencerRowActions fencer={f} onUpdate={(data) => updateFencer.mutateAsync(data)} />
+                                        </TableCell>
                                     </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {fencers.map(fencer => (
-                                        <TableRow key={fencer.id} className="hover:bg-muted/30">
-                                            <TableCell className="font-medium text-foreground">{fencer.last_name}, {fencer.first_name}</TableCell>
-                                            <TableCell className="text-muted-foreground font-mono text-sm">{fencer.usaf_id || '-'}</TableCell>
-                                            <TableCell className="text-muted-foreground">{fencer.year_of_birth}</TableCell>
-                                            <TableCell className="text-muted-foreground">{fencer.sex === 'M' ? 'Male' : fencer.sex === 'F' ? 'Female' : fencer.sex || '-'}</TableCell>
-                                            <TableCell className="text-muted-foreground">{fencer.last_membership_renewal || '-'}</TableCell>
-                                            <TableCell>
-                                                <div className="flex gap-2 text-xs">
-                                                    {fencer.is_foil === 1 && <span className="px-2.5 py-0.5 font-medium bg-blue-100 text-blue-700 border border-blue-200 rounded-full dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800">Foil</span>}
-                                                    {fencer.is_epee === 1 && <span className="px-2.5 py-0.5 font-medium bg-red-100 text-red-700 border border-red-200 rounded-full dark:bg-red-900/40 dark:text-red-300 dark:border-red-800">Epee</span>}
-                                                    {fencer.is_saber === 1 && <span className="px-2.5 py-0.5 font-medium bg-amber-100 text-amber-700 border border-amber-200 rounded-full dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800">Saber</span>}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <FencerRowActions fencer={fencer} onUpdate={(data) => updateFencer.mutateAsync(data)} />
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
+                                ))}
+                            </TableBody>
+                        </Table>
                     )}
-                </CardContent>
-            </Card>
-        </div>
+                </div>
+
+                <div className="border-t bg-muted/20 px-4 py-3 flex items-center justify-between shrink-0">
+                    <div className="text-xs text-muted-foreground font-medium">
+                        Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalFencers)} of {totalFencers}
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs text-muted-foreground">Page {currentPage} / {totalPages}</span>
+                        <div className="flex gap-1">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                disabled={currentPage === 1}
+                                onClick={() => setCurrentPage(p => p - 1)}
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                disabled={currentPage >= totalPages}
+                                onClick={() => setCurrentPage(p => p + 1)}
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
     );
 };

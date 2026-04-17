@@ -1,13 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Fencer } from '@preload/index';
 
-export const useFencers = () => {
+export const useFencers = (page?: number, pageSize?: number) => {
     return useQuery({
-        queryKey: ['fencers'],
+        queryKey: ['fencers', page, pageSize],
         queryFn: async () => {
-            const result = await window.api.getFencers();
+            const result = await window.api.getFencers(page, pageSize);
             if (!result.success) throw new Error(result.error);
-            return result.data || [];
+            return result.data || { items: [], total: 0 };
         },
     });
 };

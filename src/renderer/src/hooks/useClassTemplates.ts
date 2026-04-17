@@ -1,13 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ClassTemplate } from '@preload/index';
 
-export const useClassTemplates = () => {
+export const useClassTemplates = (page?: number, pageSize?: number) => {
     return useQuery({
-        queryKey: ['classTemplates'],
+        queryKey: ['classTemplates', page, pageSize],
         queryFn: async () => {
-            const result = await window.api.getClassTemplates();
+            const result = await window.api.getClassTemplates(page, pageSize);
             if (!result.success) throw new Error(result.error);
-            return result.data || [];
+            return result.data || { items: [], total: 0 };
         },
     });
 };

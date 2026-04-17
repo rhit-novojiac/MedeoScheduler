@@ -10,9 +10,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Pencil, Trash, Clock } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatTime } from '@/lib/utils';
 import type { ClassTemplate } from '@preload/index';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
 
 const DAYS_OF_WEEK = [
     { value: '0', label: 'Sunday' },
@@ -24,10 +25,11 @@ const DAYS_OF_WEEK = [
     { value: '6', label: 'Saturday' },
 ];
 
-const TemplateRowActions = ({ template, onUpdate, onDelete }: { template: ClassTemplate; onUpdate: (data: any) => Promise<unknown>; onDelete: (id: number) => Promise<unknown> }) => {
+const TemplateRowActions = ({ template, onUpdate, onDelete }: { template: ClassTemplate; onUpdate: (data: Omit<ClassTemplate, 'class_type_name'>) => Promise<unknown>; onDelete: (id: number) => Promise<unknown> }) => {
     const { data: classTypes } = useClassTypes();
 
     const [editOpen, setEditOpen] = useState(false);
+    const [confirmOpen, setConfirmOpen] = useState(false);
     const [name, setName] = useState(template.name);
     const [typeId, setTypeId] = useState(template.class_type_id.toString());
     const [dayOfWeek, setDayOfWeek] = useState(template.day_of_week.toString());
@@ -59,95 +61,105 @@ const TemplateRowActions = ({ template, onUpdate, onDelete }: { template: ClassT
         setEditOpen(false);
     };
 
-    const handleDelete = async () => {
-        if (confirm(`Are you sure you want to delete ${template.name}?`)) {
-            await onDelete(template.id);
-        }
-    };
-
     return (
-        <Dialog open={editOpen} onOpenChange={setEditOpen}>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                    <DialogTrigger asChild>
-                        <DropdownMenuItem className="cursor-pointer">
-                            <Pencil className="mr-2 h-4 w-4" /> Edit
-                        </DropdownMenuItem>
-                    </DialogTrigger>
-                    <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive" onClick={handleDelete}>
-                        <Trash className="mr-2 h-4 w-4" /> Delete
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DialogContent className="sm:max-w-[425px]">
-                <form onSubmit={handleUpdate}>
-                    <DialogHeader>
-                        <DialogTitle>Edit Template</DialogTitle>
-                        <DialogDescription>Update the recurring class details.</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="tNameEdit" className="text-right">Name</Label>
-                            <Input id="tNameEdit" value={name} onChange={e => setName(e.target.value)} className="col-span-3" required />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right">Class Type</Label>
-                            <div className="col-span-3">
-                                <Select value={typeId} onValueChange={setTypeId} required>
-                                    <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-                                    <SelectContent>
-                                        {classTypes?.map(ct => (
-                                            <SelectItem key={ct.id} value={ct.id.toString()}>{ct.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right">Day</Label>
-                            <div className="col-span-3">
-                                <Select value={dayOfWeek} onValueChange={setDayOfWeek} required>
-                                    <SelectTrigger><SelectValue placeholder="Select day" /></SelectTrigger>
-                                    <SelectContent>
-                                        {DAYS_OF_WEEK.map(day => (
-                                            <SelectItem key={day.value} value={day.value}>{day.label}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="tTimeEdit" className="text-right">Start Time</Label>
-                            <Input id="tTimeEdit" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="col-span-3" required />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="tDurEdit" className="text-right">Duration (m)</Label>
-                            <Input id="tDurEdit" type="number" step="15" value={duration} onChange={e => setDuration(e.target.value)} className="col-span-3" required />
-                        </div>
-                        <div className="grid grid-cols-4 items-start gap-4">
-                            <Label htmlFor="tDescEdit" className="text-right pt-2">Description</Label>
-                            <Textarea id="tDescEdit" value={description} onChange={e => setDescription(e.target.value)} className="col-span-3" />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button type="submit">
-                            Save Changes
+        <>
+            <ConfirmDialog
+                open={confirmOpen}
+                onOpenChange={setConfirmOpen}
+                title={`Delete "${template.name}"?`}
+                description="This will permanently remove this recurring class template."
+                confirmLabel="Delete"
+                onConfirm={() => onDelete(template.id)}
+            />
+            <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
                         </Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DialogTrigger asChild>
+                            <DropdownMenuItem className="cursor-pointer">
+                                <Pencil className="mr-2 h-4 w-4" /> Edit
+                            </DropdownMenuItem>
+                        </DialogTrigger>
+                        <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive" onClick={() => setConfirmOpen(true)}>
+                            <Trash className="mr-2 h-4 w-4" /> Delete
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DialogContent className="sm:max-w-[425px]">
+                    <form onSubmit={handleUpdate}>
+                        <DialogHeader>
+                            <DialogTitle>Edit Template</DialogTitle>
+                            <DialogDescription>Update the recurring class details.</DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="tNameEdit" className="text-right">Name</Label>
+                                <Input id="tNameEdit" value={name} onChange={e => setName(e.target.value)} className="col-span-3" required />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right">Class Type</Label>
+                                <div className="col-span-3">
+                                    <Select value={typeId} onValueChange={setTypeId} required>
+                                        <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                                        <SelectContent>
+                                            {classTypes?.map(ct => (
+                                                <SelectItem key={ct.id} value={ct.id.toString()}>{ct.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right">Day</Label>
+                                <div className="col-span-3">
+                                    <Select value={dayOfWeek} onValueChange={setDayOfWeek} required>
+                                        <SelectTrigger><SelectValue placeholder="Select day" /></SelectTrigger>
+                                        <SelectContent>
+                                            {DAYS_OF_WEEK.map(day => (
+                                                <SelectItem key={day.value} value={day.value}>{day.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="tTimeEdit" className="text-right">Start Time</Label>
+                                <Input id="tTimeEdit" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="col-span-3" required />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="tDurEdit" className="text-right">Duration (m)</Label>
+                                <Input id="tDurEdit" type="number" step="15" value={duration} onChange={e => setDuration(e.target.value)} className="col-span-3" required />
+                            </div>
+                            <div className="grid grid-cols-4 items-start gap-4">
+                                <Label htmlFor="tDescEdit" className="text-right pt-2">Description</Label>
+                                <Textarea id="tDescEdit" value={description} onChange={e => setDescription(e.target.value)} className="col-span-3" />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button type="submit">
+                                Save Changes
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 };
 
 export const ClassTemplatesManager = () => {
-    const { data: templates, isLoading, isError } = useClassTemplates();
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 12;
+
+    const { data: templatesData, isLoading, isError } = useClassTemplates(currentPage, pageSize);
+    const templates = templatesData?.items ?? [];
+    const totalTemplates = templatesData?.total ?? 0;
+
     const { data: classTypes } = useClassTypes();
     const createTemplate = useCreateClassTemplate();
     const updateTemplate = useUpdateClassTemplate();
@@ -176,6 +188,8 @@ export const ClassTemplatesManager = () => {
         setName('');
         setDescription('');
     };
+
+    const totalPages = Math.ceil(totalTemplates / pageSize) || 1;
 
     return (
         <Card className="h-full flex flex-col shadow-sm border-border/60">
@@ -280,9 +294,9 @@ export const ClassTemplatesManager = () => {
                                         {formatTime(t.start_time)} <br />
                                         <span className="text-xs opacity-70">{t.duration_minutes}m</span>
                                     </TableCell>
-                                    <TableCell>
-                                        <div className="font-medium text-foreground">{t.name}</div>
-                                        <div className="text-xs text-muted-foreground">{t.class_type_name}</div>
+                                    <TableCell className="min-w-0">
+                                        <div className="font-medium text-foreground break-words">{t.name}</div>
+                                        <div className="text-xs text-muted-foreground truncate">{t.class_type_name}</div>
                                     </TableCell>
                                     <TableCell>
                                         <TemplateRowActions
@@ -297,6 +311,35 @@ export const ClassTemplatesManager = () => {
                     </Table>
                 )}
             </CardContent>
+
+            <div className="border-t bg-muted/20 px-4 py-3 flex items-center justify-between shrink-0">
+                <div className="text-xs text-muted-foreground font-medium">
+                    Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalTemplates)} of {totalTemplates}
+                </div>
+                <div className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground">Page {currentPage} / {totalPages}</span>
+                    <div className="flex gap-1">
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage(p => p - 1)}
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            disabled={currentPage >= totalPages}
+                            onClick={() => setCurrentPage(p => p + 1)}
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+            </div>
         </Card>
     );
 };

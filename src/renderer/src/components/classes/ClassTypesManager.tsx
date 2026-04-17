@@ -9,10 +9,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Pencil, Trash } from 'lucide-react';
 import type { ClassType } from '@preload/index';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
 
 const ClassTypeRowActions = ({ classType, onUpdate, onDelete }: { classType: ClassType; onUpdate: (ct: ClassType) => Promise<unknown>; onDelete: (id: number) => Promise<unknown> }) => {
 
     const [editOpen, setEditOpen] = useState(false);
+    const [confirmOpen, setConfirmOpen] = useState(false);
     const [name, setName] = useState(classType.name);
     const [memberPrice, setMemberPrice] = useState(classType.member_price.toString());
     const [nonMemberPrice, setNonMemberPrice] = useState(classType.non_member_price.toString());
@@ -35,60 +37,64 @@ const ClassTypeRowActions = ({ classType, onUpdate, onDelete }: { classType: Cla
         setEditOpen(false);
     };
 
-    const handleDelete = async () => {
-        if (confirm(`Are you sure you want to delete ${classType.name}? This might break existing templates referencing it.`)) {
-            await onDelete(classType.id);
-        }
-    };
-
     return (
-        <Dialog open={editOpen} onOpenChange={setEditOpen}>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                    <DialogTrigger asChild>
-                        <DropdownMenuItem className="cursor-pointer">
-                            <Pencil className="mr-2 h-4 w-4" /> Edit
-                        </DropdownMenuItem>
-                    </DialogTrigger>
-                    <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive" onClick={handleDelete}>
-                        <Trash className="mr-2 h-4 w-4" /> Delete
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DialogContent className="sm:max-w-[425px]">
-                <form onSubmit={handleUpdate}>
-                    <DialogHeader>
-                        <DialogTitle>Edit Class Type</DialogTitle>
-                        <DialogDescription>Update pricing or name below.</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="classNameEdit" className="text-right">Name</Label>
-                            <Input id="classNameEdit" value={name} onChange={e => setName(e.target.value)} className="col-span-3" required />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="memberPriceEdit" className="text-right">Member $</Label>
-                            <Input id="memberPriceEdit" type="number" step="0.01" value={memberPrice} onChange={e => setMemberPrice(e.target.value)} className="col-span-3" required />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="nonMemberPriceEdit" className="text-right">Non-Member $</Label>
-                            <Input id="nonMemberPriceEdit" type="number" step="0.01" value={nonMemberPrice} onChange={e => setNonMemberPrice(e.target.value)} className="col-span-3" required />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button type="submit">
-                            Save Changes
+        <>
+            <ConfirmDialog
+                open={confirmOpen}
+                onOpenChange={setConfirmOpen}
+                title={`Delete "${classType.name}"?`}
+                description="This might break existing templates referencing this class type."
+                confirmLabel="Delete"
+                onConfirm={() => onDelete(classType.id)}
+            />
+            <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
                         </Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DialogTrigger asChild>
+                            <DropdownMenuItem className="cursor-pointer">
+                                <Pencil className="mr-2 h-4 w-4" /> Edit
+                            </DropdownMenuItem>
+                        </DialogTrigger>
+                        <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive" onClick={() => setConfirmOpen(true)}>
+                            <Trash className="mr-2 h-4 w-4" /> Delete
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DialogContent className="sm:max-w-[425px]">
+                    <form onSubmit={handleUpdate}>
+                        <DialogHeader>
+                            <DialogTitle>Edit Class Type</DialogTitle>
+                            <DialogDescription>Update pricing or name below.</DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="classNameEdit" className="text-right">Name</Label>
+                                <Input id="classNameEdit" value={name} onChange={e => setName(e.target.value)} className="col-span-3" required />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="memberPriceEdit" className="text-right">Member $</Label>
+                                <Input id="memberPriceEdit" type="number" step="0.01" value={memberPrice} onChange={e => setMemberPrice(e.target.value)} className="col-span-3" required />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="nonMemberPriceEdit" className="text-right">Non-Member $</Label>
+                                <Input id="nonMemberPriceEdit" type="number" step="0.01" value={nonMemberPrice} onChange={e => setNonMemberPrice(e.target.value)} className="col-span-3" required />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button type="submit">
+                                Save Changes
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 };
 
@@ -118,7 +124,7 @@ export const ClassTypesManager = () => {
         <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div className="space-y-1">
-                    <CardTitle>Class Types & Pricing</CardTitle>
+                    <CardTitle>Class Types &amp; Pricing</CardTitle>
                     <CardDescription>Manage the foundational categories of classes offered.</CardDescription>
                 </div>
                 <Dialog open={open} onOpenChange={setOpen}>

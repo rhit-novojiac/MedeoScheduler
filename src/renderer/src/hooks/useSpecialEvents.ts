@@ -1,71 +1,68 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { ClassSession } from '@preload/index';
+import type { SpecialEvent } from '@preload/index';
 
-export const useClassSessionsByDate = (date: string) => {
+export const useSpecialEventsByDate = (date: string) => {
     return useQuery({
-        queryKey: ['classSessions', date],
+        queryKey: ['specialEvents', date],
         queryFn: async () => {
-            const result = await window.api.getOrCreateClassSessionsByDate(date);
+            const result = await window.api.getSpecialEventsByDate(date);
             if (!result.success) throw new Error(result.error);
             return result.data || [];
         },
-        enabled: !!date, // Only run if a date is provided
+        enabled: !!date,
     });
 };
 
-export const useCreateClassSession = () => {
+export const useCreateSpecialEvent = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (session: Omit<ClassSession, 'id' | 'template_name' | 'description' | 'class_type_name'>) => {
-            const result = await window.api.createClassSession(session);
+        mutationFn: async (event: Omit<SpecialEvent, 'id'>) => {
+            const result = await window.api.createSpecialEvent(event);
             if (!result.success) throw new Error(result.error);
             return result.data;
         },
         onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['specialEvents'] });
             queryClient.invalidateQueries({ queryKey: ['classSessions', variables.date] });
         },
         onError: (error) => {
-            console.error('Failed to create session:', error);
+            console.error('Failed to create special event:', error);
         },
     });
 };
 
-export const useDeleteClassSession = () => {
+export const useUpdateSpecialEvent = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async ({ id }: { id: number; date: string }) => {
-            const result = await window.api.deleteClassSession(id);
+        mutationFn: async (event: SpecialEvent) => {
+            const result = await window.api.updateSpecialEvent(event);
             if (!result.success) throw new Error(result.error);
             return result.data;
         },
         onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['specialEvents'] });
             queryClient.invalidateQueries({ queryKey: ['classSessions', variables.date] });
         },
         onError: (error) => {
-            console.error('Failed to delete session:', error);
+            console.error('Failed to update special event:', error);
         },
     });
 };
 
-export const useUpdateClassSession = () => {
+export const useDeleteSpecialEvent = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async ({
-            session,
-            date,
-        }: {
-            session: Pick<ClassSession, 'id' | 'name' | 'class_type_id' | 'start_time' | 'duration_minutes'>;
-            date: string;
-        }) => {
-            const result = await window.api.updateClassSession(session);
+        mutationFn: async ({ id, date }: { id: number; date: string }) => {
+            const result = await window.api.deleteSpecialEvent(id);
             if (!result.success) throw new Error(result.error);
             return result.data;
         },
         onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['specialEvents'] });
             queryClient.invalidateQueries({ queryKey: ['classSessions', variables.date] });
         },
         onError: (error) => {
-            console.error('Failed to update session:', error);
+            console.error('Failed to delete special event:', error);
         },
     });
 };

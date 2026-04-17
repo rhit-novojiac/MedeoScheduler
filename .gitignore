@@ -90,3 +90,12 @@ typings/
 
 # Electron-Forge
 out/
+
+# Local Output and Log Files
+*-output*.txt
+*-output*.json
+vitest-out*.txt
+lint-results.json
+lint.txt
+lint_*.txt
+

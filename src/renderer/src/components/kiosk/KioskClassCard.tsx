@@ -3,11 +3,10 @@ import { Clock, UserCheck } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatTime } from '@/lib/utils';
-import { useAttendeesForSession } from '../../hooks/useClassAttendees';
 import type { ClassSession } from '@preload/index';
 
-export const KioskClassCard = ({ session, onClick, expired }: { session: ClassSession; onClick: () => void; expired: boolean }) => {
-    const { data: attendees } = useAttendeesForSession(session.id);
+const KioskClassCardComponent = ({ session, onClick, expired }: { session: ClassSession; onClick: () => void; expired: boolean }) => {
+    const count = session.attendee_count ?? 0;
 
     if (expired) {
         // Compact / collapsed card for finished classes
@@ -28,7 +27,7 @@ export const KioskClassCard = ({ session, onClick, expired }: { session: ClassSe
                     <div className="flex items-center gap-3 shrink-0 text-muted-foreground text-sm">
                         <span className="flex items-center gap-1">
                             <UserCheck className="w-3.5 h-3.5" />
-                            {attendees?.length || 0}
+                            {count}
                         </span>
                         <span className="text-xs text-primary/70">Sign In &rarr;</span>
                     </div>
@@ -58,10 +57,12 @@ export const KioskClassCard = ({ session, onClick, expired }: { session: ClassSe
             <CardContent className="px-6 pb-6 pt-0 flex justify-between items-center text-muted-foreground">
                 <span className="flex items-center gap-2">
                     <UserCheck className="w-5 h-5" />
-                    {attendees?.length || 0} Signed In
+                    {count} Signed In
                 </span>
                 <span className="text-primary font-semibold">Tap to Sign In &rarr;</span>
             </CardContent>
         </Card>
     );
 };
+
+export const KioskClassCard = React.memo(KioskClassCardComponent);

@@ -1,24 +1,26 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import type { Fencer, ClassType, ClassTemplate, ClassSession } from './index.d';
 
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 const api = {
     getFencers: () => ipcRenderer.invoke('getFencers'),
-    createFencer: (fencer: Record<string, unknown>) => ipcRenderer.invoke('createFencer', fencer),
-    updateFencer: (fencer: Record<string, unknown>) => ipcRenderer.invoke('updateFencer', fencer),
+    createFencer: (fencer: Omit<Fencer, 'id'>) => ipcRenderer.invoke('createFencer', fencer),
+    updateFencer: (fencer: Fencer) => ipcRenderer.invoke('updateFencer', fencer),
 
     getClassTypes: () => ipcRenderer.invoke('getClassTypes'),
-    createClassType: (classType: Record<string, unknown>) => ipcRenderer.invoke('createClassType', classType),
-    updateClassType: (classType: Record<string, unknown>) => ipcRenderer.invoke('updateClassType', classType),
+    createClassType: (classType: Omit<ClassType, 'id'>) => ipcRenderer.invoke('createClassType', classType),
+    updateClassType: (classType: ClassType) => ipcRenderer.invoke('updateClassType', classType),
     deleteClassType: (id: number) => ipcRenderer.invoke('deleteClassType', id),
 
     getClassTemplates: () => ipcRenderer.invoke('getClassTemplates'),
-    createClassTemplate: (template: Record<string, unknown>) => ipcRenderer.invoke('createClassTemplate', template),
-    updateClassTemplate: (template: Record<string, unknown>) => ipcRenderer.invoke('updateClassTemplate', template),
+    createClassTemplate: (template: Omit<ClassTemplate, 'id' | 'class_type_name'>) => ipcRenderer.invoke('createClassTemplate', template),
+    updateClassTemplate: (template: Omit<ClassTemplate, 'class_type_name'>) => ipcRenderer.invoke('updateClassTemplate', template),
     deleteClassTemplate: (id: number) => ipcRenderer.invoke('deleteClassTemplate', id),
 
     getOrCreateClassSessionsByDate: (date: string) => ipcRenderer.invoke('getOrCreateClassSessionsByDate', date),
-    createClassSession: (session: Record<string, unknown>) => ipcRenderer.invoke('createClassSession', session),
+    createClassSession: (session: Omit<ClassSession, 'id' | 'template_name' | 'description' | 'class_type_name'>) => ipcRenderer.invoke('createClassSession', session),
+    updateClassSession: (session: Pick<ClassSession, 'id' | 'name' | 'class_type_id' | 'start_time' | 'duration_minutes'>) => ipcRenderer.invoke('updateClassSession', session),
     deleteClassSession: (id: number) => ipcRenderer.invoke('deleteClassSession', id),
     getAttendeesForSession: (sessionId: number) => ipcRenderer.invoke('getAttendeesForSession', sessionId),
 

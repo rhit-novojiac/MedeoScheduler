@@ -44,10 +44,20 @@ export interface ClassTemplate {
     class_type_name?: string; // Loaded via SQL JOIN
 }
 
+export interface SpecialEvent {
+    id: number;
+    name: string;
+    type: string;
+    date: string;
+    cancels_classes: number;
+    is_annual: number;
+    excluded_class_ids: string | null;
+}
+
 declare global {
     interface Window {
         api: {
-            getFencers: () => Promise<{ success: boolean; data?: Fencer[]; error?: string }>;
+            getFencers: (page?: number, pageSize?: number) => Promise<{ success: boolean; data?: { items: Fencer[], total: number }; error?: string }>;
             createFencer: (fencer: Omit<Fencer, 'id'>) => Promise<{ success: boolean; data?: number; error?: string }>;
             updateFencer: (fencer: Fencer) => Promise<{ success: boolean; data?: boolean; error?: string }>;
 
@@ -56,13 +66,14 @@ declare global {
             updateClassType: (classType: ClassType) => Promise<{ success: boolean; data?: boolean; error?: string }>;
             deleteClassType: (id: number) => Promise<{ success: boolean; data?: boolean; error?: string }>;
 
-            getClassTemplates: () => Promise<{ success: boolean; data?: ClassTemplate[]; error?: string }>;
+            getClassTemplates: (page?: number, pageSize?: number) => Promise<{ success: boolean; data?: { items: ClassTemplate[], total: number }; error?: string }>;
             createClassTemplate: (template: Omit<ClassTemplate, 'id' | 'class_type_name'>) => Promise<{ success: boolean; data?: number; error?: string }>;
             updateClassTemplate: (template: Omit<ClassTemplate, 'class_type_name'>) => Promise<{ success: boolean; data?: boolean; error?: string }>;
             deleteClassTemplate: (id: number) => Promise<{ success: boolean; data?: boolean; error?: string }>;
 
             getOrCreateClassSessionsByDate: (date: string) => Promise<{ success: boolean; data?: ClassSession[]; error?: string }>;
             createClassSession: (session: Omit<ClassSession, 'id' | 'template_name' | 'description' | 'class_type_name'>) => Promise<{ success: boolean; data?: number; error?: string }>;
+            updateClassSession: (session: Pick<ClassSession, 'id' | 'name' | 'class_type_id' | 'start_time' | 'duration_minutes'>) => Promise<{ success: boolean; data?: boolean; error?: string }>;
             deleteClassSession: (id: number) => Promise<{ success: boolean; data?: boolean; error?: string }>;
             getAttendeesForSession: (sessionId: number) => Promise<{ success: boolean; data?: Fencer[]; error?: string }>;
             addAttendee: (sessionId: number, fencerId: number) => Promise<{ success: boolean; data?: boolean; error?: string }>;
@@ -77,6 +88,12 @@ declare global {
             // Admin PIN
             verifyAdminPin: (pin: string) => Promise<{ success: boolean; error?: string }>;
             updateAdminPin: (currentPin: string, newPin: string) => Promise<{ success: boolean; error?: string }>;
+
+            // Special Events
+            getSpecialEventsByDate: (date: string) => Promise<{ success: boolean; data?: SpecialEvent[]; error?: string }>;
+            createSpecialEvent: (event: Omit<SpecialEvent, 'id'>) => Promise<{ success: boolean; data?: number; error?: string }>;
+            updateSpecialEvent: (event: SpecialEvent) => Promise<{ success: boolean; data?: boolean; error?: string }>;
+            deleteSpecialEvent: (id: number) => Promise<{ success: boolean; data?: boolean; error?: string }>;
         };
     }
 }
