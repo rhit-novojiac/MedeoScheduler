@@ -16,8 +16,8 @@ export const useAttendeesForSession = (sessionId: number | null) => {
 export const useAddAttendee = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async ({ sessionId, fencerId }: { sessionId: number; fencerId: number; date?: string }) => {
-            const result = await window.api.addAttendee(sessionId, fencerId);
+        mutationFn: async ({ sessionId, fencerId, fraction, date }: { sessionId: number; fencerId: number; fraction?: number; date?: string }) => {
+            const result = await window.api.addAttendee(sessionId, fencerId, fraction);
             if (!result.success) throw new Error(result.error);
             return result.data;
         },

@@ -145,6 +145,16 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 6,
+    description: 'Add fraction column to class_attendees table',
+    up: (db) => {
+      const cols = (db.pragma('table_info(class_attendees)') as { name: string }[]).map(c => c.name);
+      if (!cols.includes('fraction')) {
+        db.exec('ALTER TABLE class_attendees ADD COLUMN fraction REAL NOT NULL DEFAULT 1.0');
+      }
+    },
+  },
 ];
 
 // ---------------------------------------------------------------------------

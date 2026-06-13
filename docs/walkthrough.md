@@ -11,10 +11,11 @@ This document summarizes the completed architecture, features, and validations f
 ## 2. Completed Application Ecosystem
 
 ### Admin Dashboard
-- **Daily Schedule Organizer:** Displaying the day's calendar, smartly resolving auto-instantiated template classes against ad-hoc sessions.
+- **Daily Schedule Organizer:** Displaying the day's calendar, smartly resolving auto-instantiated template classes against ad-hoc sessions, while handling holiday/special event cancellations and class exclusions.
 - **Attendance Sheet:** A slide-over Drawer utilizing a high-performance Combobox for frictionless checking in of hundreds of club members.
-- **Roster Directory:** Full CRUD interactions for Fencers, safely maintaining fields like Weapon type and Membership Renewal dates.
-- **CSV Reporter Engine:** Dynamic pivoting of SQLite analytics. Generates spreadsheets of attendees matched against Class Types, evaluating Membership Status retroactively depending on the export window target. Opens natively via the OS Save Dialog.
+- **Roster Directory:** Full CRUD interactions for Fencers, safely maintaining fields like USAF ID, Weapon type, and Membership Renewal dates.
+- **CSV Reporter Engine:** Dynamic pivoting of SQLite analytics. Generates spreadsheets of attendees (including USAF ID) matched against Class Types, evaluating Membership Status retroactively depending on the export window target. Opens natively via the OS Save Dialog.
+
 
 ### Fencer Sign-In Kiosk
 - **Self-Service:** Full screen, heavily stylized landing page built for tablets.

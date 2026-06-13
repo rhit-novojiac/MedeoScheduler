@@ -182,10 +182,30 @@ export const AttendanceSheet = ({ session, open, onOpenChange }: AttendanceSheet
                             <div className="divide-y">
                                 {attendees.map(a => (
                                     <div key={a.id} className="flex justify-between items-center p-3 hover:bg-muted/30 transition-colors">
-                                        <div className="font-medium">{a.last_name}, {a.first_name}</div>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleRemove(a.id)}>
-                                            <X className="w-4 h-4" />
-                                        </Button>
+                                        <div className="flex flex-col gap-1">
+                                            <div className="font-medium text-sm">{a.last_name}, {a.first_name}</div>
+                                            <div className="text-xs text-muted-foreground">
+                                                Participation: {a.fraction === 1.0 ? 'Whole' : a.fraction === 0.67 ? '2/3' : a.fraction === 0.50 ? '1/2' : '1/3'} Class
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <select
+                                                value={a.fraction ?? 1.0}
+                                                onChange={async (e) => {
+                                                    const fraction = parseFloat(e.target.value);
+                                                    await addAttendee.mutateAsync({ sessionId: session.id, fencerId: a.id, fraction });
+                                                }}
+                                                className="bg-background text-foreground border border-border/50 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer font-medium"
+                                            >
+                                                <option value="1" className="bg-background text-foreground">Whole Class</option>
+                                                <option value="0.67" className="bg-background text-foreground">2/3 Class</option>
+                                                <option value="0.5" className="bg-background text-foreground">1/2 Class</option>
+                                                <option value="0.33" className="bg-background text-foreground">1/3 Class</option>
+                                            </select>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleRemove(a.id)}>
+                                                <X className="w-4 h-4" />
+                                            </Button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>

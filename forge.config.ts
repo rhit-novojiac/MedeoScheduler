@@ -13,7 +13,9 @@ const config: ForgeConfig = {
       unpack: '*.node',
     },
   },
-  rebuildConfig: {},
+  rebuildConfig: {
+    onlyModules: [], // Bypasses the 6-second native module rebuild check during development
+  },
   makers: [
     new MakerSquirrel({}),
     new MakerZIP({}, ['darwin']),

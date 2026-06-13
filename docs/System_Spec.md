@@ -15,21 +15,23 @@ Fencers are the primary individuals tracked in the system. Coaches are not a sep
 
 **Data Points:**
 - **Name:** First Name, Last Name.
+- **USAF ID:** Stored as an integer (defaults to 0 if not provided), used for reporting.
 - **Sex:** Sex/Gender of the fencer.
 - **Year of Birth:** Stored as a 4-digit integer to allow age calculations for event and category eligibility without requiring full date collection.
 - **Membership Status:** Determined dynamically. Fencers have a `last_membership_renewal` date. They are considered members if the class they are attending falls within 1 year of this renewal date.
 - **Weapons:** Stored as 3 independent boolean flags (`is_foil`, `is_epee`, `is_saber`) since most use 1 but some use multiple.
 
-### 2.2. Class Management
+### 2.2. Class & Event Management
 Classes are primarily recurring events generated from templates, with the ability to handle ad-hoc signups before, during, or after the class.
 
 **Data Points:**
 - **Class Types & Pricing:** Classes belong to a type (Footwork, Situational Bouting, Open Bouting, Conditioning). Pricing is defined at the Class Type level (Member price vs Non-member price) and inherits down.
 - **Class Templates:** Recurring schedules (e.g., "Tuesday 5 PM Footwork") form the basis of the calendar to minimize manual data entry.
-- **Class Sessions:** Specific instances of a class happening on a specific date. 
+- **Class Sessions:** Specific instances of a class happening on a specific date. A class session may override the template's name and class type.
 - **Coaches:** One or more Fencers attached to a Class Session as the instructor(s).
 - **Description:** A paragraph detailing what happens in the class (can default from the template).
 - **Participants/Attendance:** Fencers signed up for the class. Students can be added to the attendance list at any time.
+- **Special Events:** Registered events (e.g., holidays, tournaments) on a specific date or recurring annually. Special events can optionally cancel all classes for the day, with an option to exclude specific class sessions from cancellation.
 
 ### 2.3. Export Functionality
 The application does not track billing or payments. It only tracks attendance and acts as an exporter for the external system.
@@ -39,8 +41,12 @@ The application does not track billing or payments. It only tracks attendance an
 - **Required Columns:**
   - Fencer First Name
   - Fencer Last Name
+  - USAF ID
   - Number of instances of each Class Type taken in the period
   - Member Status (Yes/No based on the date of the export vs their renewal date)
+
+### 2.4. System Settings & Administration
+- **Admin PIN:** A secure PIN (using scrypt hashing with a legacy SHA-256 fallback) is stored in the `settings` table to prevent unauthorized kiosk users from switching back into Admin Mode.
 
 ## 3. Scope Exclusions
 - **Billing:** Handled externally. No tracking of payments or balances.
@@ -48,3 +54,4 @@ The application does not track billing or payments. It only tracks attendance an
 
 ## 4. Next Steps
 The database schema has been finalized based on this specification and documented in `implementation_plan.md`. The project is ready to move into the Implementation phase.
+

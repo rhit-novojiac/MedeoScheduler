@@ -13,25 +13,26 @@ The SQLite engine will exclusively run in the Electron Main process.
 **Database Schema:**
 
 * **`fencers`**
-  * `id` (INTEGER PRIMARY KEY)
+  * `id` (INTEGER PRIMARY KEY AUTOINCREMENT)
   * `first_name` (TEXT NOT NULL)
   * `last_name` (TEXT NOT NULL)
   * `sex` (TEXT)
   * `year_of_birth` (INTEGER NOT NULL) - 4-digit year (YYYY)
+  * `usaf_id` (INTEGER NOT NULL DEFAULT 0) - USAF membership ID
   * `last_membership_renewal` (TEXT) - ISO 8601 date string, used to calculate membership status
   * `is_foil` (INTEGER NOT NULL DEFAULT 0) - Boolean (0/1)
   * `is_epee` (INTEGER NOT NULL DEFAULT 0)
   * `is_saber` (INTEGER NOT NULL DEFAULT 0)
 
 * **`class_types`**
-  * `id` (INTEGER PRIMARY KEY)
+  * `id` (INTEGER PRIMARY KEY AUTOINCREMENT)
   * `name` (TEXT NOT NULL UNIQUE) - e.g., Footwork, Open Bouting
   * `member_price` (REAL NOT NULL)
   * `non_member_price` (REAL NOT NULL)
 
 * **`class_templates`** (For recurring classes)
-  * `id` (INTEGER PRIMARY KEY)
-  * `class_type_id` (INTEGER FORIEGN KEY)
+  * `id` (INTEGER PRIMARY KEY AUTOINCREMENT)
+  * `class_type_id` (INTEGER FOREIGN KEY)
   * `name` (TEXT NOT NULL)
   * `description` (TEXT)
   * `day_of_week` (INTEGER) - 0-6 for Sunday-Saturday
@@ -39,8 +40,10 @@ The SQLite engine will exclusively run in the Electron Main process.
   * `duration_minutes` (INTEGER)
 
 * **`class_sessions`** (Actual class instances)
-  * `id` (INTEGER PRIMARY KEY)
+  * `id` (INTEGER PRIMARY KEY AUTOINCREMENT)
   * `template_id` (INTEGER FOREIGN KEY) - Nullable if ad-hoc
+  * `class_type_id` (INTEGER FOREIGN KEY) - Nullable override
+  * `name` (TEXT) - Nullable override
   * `date` (TEXT NOT NULL) - ISO 8601 date string
   * `start_time` (TEXT NOT NULL) - HH:MM format
   * `duration_minutes` (INTEGER NOT NULL)
@@ -48,14 +51,38 @@ The SQLite engine will exclusively run in the Electron Main process.
 * **`class_coaches`** (Join table for coaches)
   * `class_session_id` (INTEGER FOREIGN KEY)
   * `coach_id` (INTEGER FOREIGN KEY to `fencers.id`)
+  * PRIMARY KEY (`class_session_id`, `coach_id`)
 
 * **`class_attendees`** (Join table for attendance)
   * `class_session_id` (INTEGER FOREIGN KEY)
   * `fencer_id` (INTEGER FOREIGN KEY to `fencers.id`)
+  * PRIMARY KEY (`class_session_id`, `fencer_id`)
+
+* **`settings`** (Application settings/security)
+  * `key` (TEXT PRIMARY KEY) - e.g., 'admin_pin_hash'
+  * `value` (TEXT NOT NULL)
+
+* **`special_events`** (For cancellation rules/holidays)
+  * `id` (INTEGER PRIMARY KEY AUTOINCREMENT)
+  * `name` (TEXT NOT NULL)
+  * `type` (TEXT NOT NULL)
+  * `date` (TEXT NOT NULL)
+  * `cancels_classes` (INTEGER NOT NULL DEFAULT 0)
+  * `is_annual` (INTEGER NOT NULL DEFAULT 0)
+  * `excluded_class_ids` (TEXT) - JSON string array of session IDs excluded from cancellation
 
 ### Preload & IPC Bridge
 * Use `contextBridge` to expose a `window.api` object with typed asynchronous methods.
-* **Handlers:** `getFencers`, `createFencer`, `updateFencer`, `getClassTypes`, `getClassTemplates`, `getSessionsByDate`, `createSession`, `addAttendee`, `removeAttendee`, `addCoach`, `removeCoach`, `generateExportCsv`.
+* **Handlers:**
+  * **Fencers:** `getFencers`, `createFencer`, `updateFencer`
+  * **Class Types:** `getClassTypes`, `createClassType`, `updateClassType`, `deleteClassType`
+  * **Class Templates:** `getClassTemplates`, `createClassTemplate`, `updateClassTemplate`, `deleteClassTemplate`
+  * **Class Sessions:** `getOrCreateClassSessionsByDate`, `createClassSession`, `updateClassSession`, `deleteClassSession`
+  * **Attendance:** `getAttendeesForSession`, `addAttendee`, `removeAttendee`
+  * **Coaches:** `getCoachesForSession`, `addCoach`, `removeCoach`
+  * **Reports:** `generateExportCsv`
+  * **Admin settings:** `verifyAdminPin`, `updateAdminPin`
+  * **Special Events:** `getSpecialEventsByDate`, `createSpecialEvent`, `updateSpecialEvent`, `deleteSpecialEvent`
 
 ### Frontend Architecture (React + TanStack Suite)
 * **Routing:** `TanStack Router` using memory history. 

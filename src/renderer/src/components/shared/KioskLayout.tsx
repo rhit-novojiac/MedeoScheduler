@@ -52,6 +52,7 @@ export const KioskLayout = () => {
 
     const [selectedSession, setSelectedSession] = useState<ClassSession | null>(null);
     const [dialogOpen, setDialogOpen] = useState(false);
+    const [selectedFencer, setSelectedFencer] = useState<{ id: number; name: string } | null>(null);
 
     // Success overlay state
     const [successFencerName, setSuccessFencerName] = useState<string | null>(null);
@@ -89,16 +90,18 @@ export const KioskLayout = () => {
 
     const openSignIn = (session: ClassSession) => {
         setSelectedSession(session);
+        setSelectedFencer(null);
         setDialogOpen(true);
     };
 
-    const handleSignIn = async (fencerId: number, fencerName: string) => {
+    const handleSignIn = async (fencerId: number, fencerName: string, fraction: number) => {
         if (!selectedSession?.id) return;
 
-        await addAttendee.mutateAsync({ sessionId: selectedSession.id, fencerId, date: todayStr });
+        await addAttendee.mutateAsync({ sessionId: selectedSession.id, fencerId, fraction, date: todayStr });
 
         // Trigger success animation
         setDialogOpen(false);
+        setSelectedFencer(null);
         setSuccessFencerName(fencerName);
 
         // Auto-dismiss
@@ -127,7 +130,7 @@ export const KioskLayout = () => {
             {/* Header */}
             <div className="pt-16 pb-12 px-8 text-center z-10">
                 <h1 className="text-6xl font-black tracking-tighter text-foreground drop-shadow-sm mb-4">
-                    Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Medeo Fencing</span>
+                    Welcome to <span className="text-primary">Medeo Fencing</span>
                 </h1>
                 <p className="text-2xl text-muted-foreground font-medium">
                     {format(new Date(), 'EEEE, MMMM do')} &mdash; Select your class to sign in
@@ -211,45 +214,92 @@ export const KioskLayout = () => {
             </div>
 
             {/* Sign In Dialog */}
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) setSelectedFencer(null); }}>
                 <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-2xl">
                     <DialogHeader className="p-8 bg-muted/30 border-b">
-                        <DialogTitle className="text-3xl font-bold">Who is signing in?</DialogTitle>
+                        <DialogTitle className="text-3xl font-bold">
+                            {selectedFencer ? 'Select Participation' : 'Who is signing in?'}
+                        </DialogTitle>
                         <DialogDescription className="text-xl mt-2">
-                            {selectedSession?.template_name} at {selectedSession?.start_time ? formatTime(selectedSession.start_time) : ''}
+                            {selectedFencer 
+                                ? `Signing in: ${selectedFencer.name}` 
+                                : `${selectedSession?.template_name || ''} at ${selectedSession?.start_time ? formatTime(selectedSession.start_time) : ''}`}
                         </DialogDescription>
                     </DialogHeader>
 
-                    <Command className="border-0 rounded-none bg-background">
-                        <div className="flex items-center border-b px-6 py-4">
-                            <Search className="mr-4 h-6 w-6 shrink-0 opacity-50" />
-                            <CommandInput
-                                placeholder="Type your name to search..."
-                                className="h-14 text-2xl outline-none placeholder:text-muted-foreground/50 flex-1 bg-transparent"
-                            />
+                    {!selectedFencer ? (
+                        <Command className="border-0 rounded-none bg-background">
+                            <div className="flex items-center border-b px-6 py-4">
+                                <Search className="mr-4 h-6 w-6 shrink-0 opacity-50" />
+                                <CommandInput
+                                    placeholder="Type your name to search..."
+                                    className="h-14 text-2xl outline-none placeholder:text-muted-foreground/50 flex-1 bg-transparent"
+                                />
+                            </div>
+                            <CommandList className="max-h-[50vh] p-2">
+                                <CommandEmpty className="p-8 text-center text-lg text-muted-foreground">
+                                    No fencers found matching that name.
+                                </CommandEmpty>
+                                <CommandGroup>
+                                    {availableFencers.map((fencer) => (
+                                        <CommandItem
+                                            key={fencer.id}
+                                            value={`${fencer.last_name} ${fencer.first_name}`}
+                                            onSelect={() => setSelectedFencer({ id: fencer.id, name: `${fencer.first_name} ${fencer.last_name}` })}
+                                            className="cursor-pointer text-2xl py-6 px-6 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors mb-1"
+                                        >
+                                            <div className="flex justify-between items-center w-full">
+                                                <span>
+                                                    <span className="font-bold">{fencer.last_name}</span>, {fencer.first_name}
+                                                </span>
+                                            </div>
+                                        </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                            </CommandList>
+                        </Command>
+                    ) : (
+                        <div className="p-8 space-y-6 bg-background">
+                            <div className="grid grid-cols-2 gap-4">
+                                <button
+                                    onClick={() => handleSignIn(selectedFencer.id, selectedFencer.name, 1.0)}
+                                    className="h-20 rounded-2xl bg-primary text-primary-foreground hover:bg-primary/95 flex flex-col items-center justify-center transition-colors shadow-lg border border-primary/20 cursor-pointer"
+                                >
+                                    <span className="text-2xl font-black">Whole Class</span>
+                                </button>
+                                <button
+                                    onClick={() => handleSignIn(selectedFencer.id, selectedFencer.name, 0.67)}
+                                    className="h-20 rounded-2xl bg-secondary text-secondary-foreground hover:bg-secondary/80 flex flex-col items-center justify-center transition-colors shadow-lg border border-border/50 cursor-pointer"
+                                >
+                                    <span className="text-2xl font-black">2/3 Class</span>
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 pt-2">
+                                <button
+                                    onClick={() => handleSignIn(selectedFencer.id, selectedFencer.name, 0.50)}
+                                    className="h-14 rounded-xl bg-muted/45 hover:bg-muted/75 text-foreground flex flex-col items-center justify-center transition-colors border border-border/50 cursor-pointer"
+                                >
+                                    <span className="text-lg font-bold">1/2 Class</span>
+                                </button>
+                                <button
+                                    onClick={() => handleSignIn(selectedFencer.id, selectedFencer.name, 0.33)}
+                                    className="h-14 rounded-xl bg-muted/45 hover:bg-muted/75 text-foreground flex flex-col items-center justify-center transition-colors border border-border/50 cursor-pointer"
+                                >
+                                    <span className="text-lg font-bold">1/3 Class</span>
+                                </button>
+                            </div>
+
+                            <div className="flex justify-end pt-4 border-t mt-4">
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setSelectedFencer(null)}
+                                    className="text-lg px-6 h-12"
+                                >
+                                    Go Back
+                                </Button>
+                            </div>
                         </div>
-                        <CommandList className="max-h-[50vh] p-2">
-                            <CommandEmpty className="p-8 text-center text-lg text-muted-foreground">
-                                No fencers found matching that name.
-                            </CommandEmpty>
-                            <CommandGroup>
-                                {availableFencers.map((fencer) => (
-                                    <CommandItem
-                                        key={fencer.id}
-                                        value={`${fencer.last_name} ${fencer.first_name}`}
-                                        onSelect={() => handleSignIn(fencer.id, `${fencer.first_name} ${fencer.last_name}`)}
-                                        className="cursor-pointer text-2xl py-6 px-6 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors mb-1"
-                                    >
-                                        <div className="flex justify-between items-center w-full">
-                                            <span>
-                                                <span className="font-bold">{fencer.last_name}</span>, {fencer.first_name}
-                                            </span>
-                                        </div>
-                                    </CommandItem>
-                                ))}
-                            </CommandGroup>
-                        </CommandList>
-                    </Command>
+                    )}
                 </DialogContent>
             </Dialog>
 

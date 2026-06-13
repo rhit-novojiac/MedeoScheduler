@@ -153,14 +153,18 @@ export const updateClassSession = (db: Database, session: Pick<ClassSession, 'id
 
 export const getAttendeesForSession = (db: Database, sessionId: number) =>
     db.prepare(`
-        SELECT f.*
+        SELECT f.*, a.fraction
         FROM fencers f
         JOIN class_attendees a ON f.id = a.fencer_id
         WHERE a.class_session_id = ?
     `).all(sessionId);
 
-export const addAttendee = (db: Database, sessionId: number, fencerId: number) =>
-    db.prepare('INSERT OR IGNORE INTO class_attendees (class_session_id, fencer_id) VALUES (?, ?)').run(sessionId, fencerId);
+export const addAttendee = (db: Database, sessionId: number, fencerId: number, fraction: number = 1.0) =>
+    db.prepare(`
+        INSERT INTO class_attendees (class_session_id, fencer_id, fraction)
+        VALUES (?, ?, ?)
+        ON CONFLICT(class_session_id, fencer_id) DO UPDATE SET fraction = excluded.fraction
+    `).run(sessionId, fencerId, fraction);
 
 export const removeAttendee = (db: Database, sessionId: number, fencerId: number) =>
     db.prepare('DELETE FROM class_attendees WHERE class_session_id = ? AND fencer_id = ?').run(sessionId, fencerId);
@@ -200,7 +204,7 @@ export const getAttendanceByPeriod = (db: Database, startDate: string, endDate: 
         SELECT
             a.fencer_id,
             COALESCE(s.class_type_id, t.class_type_id) as class_type_id,
-            COUNT(s.id) as attendance_count
+            SUM(a.fraction) as attendance_count
         FROM class_attendees a
         JOIN class_sessions s ON a.class_session_id = s.id
         LEFT JOIN class_templates t ON s.template_id = t.id

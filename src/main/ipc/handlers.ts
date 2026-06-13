@@ -202,9 +202,9 @@ export function registerIpcHandlers() {
         }
     });
 
-    ipcMain.handle('addAttendee', (_, sessionId: number, fencerId: number) => {
+    ipcMain.handle('addAttendee', (_, sessionId: number, fencerId: number, fraction?: number) => {
         try {
-            const info = q.addAttendee(db, sessionId, fencerId);
+            const info = q.addAttendee(db, sessionId, fencerId, fraction ?? 1.0);
             return { success: true, data: info.changes > 0 };
         } catch (error: unknown) {
             return { success: false, error: (error as Error).message };
@@ -288,7 +288,11 @@ export function registerIpcHandlers() {
                 }
 
                 const row: (string | number)[] = [fencer.first_name, fencer.last_name, fencer.usaf_id || 0];
-                for (const ct of classTypesData) row.push(counts.get(ct.id) || 0);
+                for (const ct of classTypesData) {
+                    const rawVal = counts.get(ct.id) || 0;
+                    const roundedVal = Math.round(rawVal * 100) / 100;
+                    row.push(roundedVal);
+                }
                 row.push(isMember);
                 rows.push(row);
             }

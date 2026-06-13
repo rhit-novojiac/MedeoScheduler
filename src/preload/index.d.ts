@@ -9,6 +9,7 @@ export interface Fencer {
     is_foil: number;
     is_epee: number;
     is_saber: number;
+    fraction?: number;
 }
 
 export interface ClassSession {
@@ -76,7 +77,7 @@ declare global {
             updateClassSession: (session: Pick<ClassSession, 'id' | 'name' | 'class_type_id' | 'start_time' | 'duration_minutes'>) => Promise<{ success: boolean; data?: boolean; error?: string }>;
             deleteClassSession: (id: number) => Promise<{ success: boolean; data?: boolean; error?: string }>;
             getAttendeesForSession: (sessionId: number) => Promise<{ success: boolean; data?: Fencer[]; error?: string }>;
-            addAttendee: (sessionId: number, fencerId: number) => Promise<{ success: boolean; data?: boolean; error?: string }>;
+            addAttendee: (sessionId: number, fencerId: number, fraction?: number) => Promise<{ success: boolean; data?: boolean; error?: string }>;
             removeAttendee: (sessionId: number, fencerId: number) => Promise<{ success: boolean; data?: boolean; error?: string }>;
 
             getCoachesForSession: (sessionId: number) => Promise<{ success: boolean; data?: Fencer[]; error?: string }>;
