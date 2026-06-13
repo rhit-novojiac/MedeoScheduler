@@ -79,15 +79,16 @@ export const getClassTemplatesCount = (db: Database) => {
 
 export const createClassTemplate = (db: Database, template: Omit<ClassTemplate, 'id' | 'class_type_name'>) =>
     db.prepare(`
-        INSERT INTO class_templates (class_type_id, name, description, day_of_week, start_time, duration_minutes)
-        VALUES (@class_type_id, @name, @description, @day_of_week, @start_time, @duration_minutes)
+        INSERT INTO class_templates (class_type_id, name, description, day_of_week, start_time, duration_minutes, weapon)
+        VALUES (@class_type_id, @name, @description, @day_of_week, @start_time, @duration_minutes, @weapon)
     `).run(template);
 
 export const updateClassTemplate = (db: Database, template: Omit<ClassTemplate, 'class_type_name'>) =>
     db.prepare(`
         UPDATE class_templates
         SET class_type_id = @class_type_id, name = @name, description = @description,
-            day_of_week = @day_of_week, start_time = @start_time, duration_minutes = @duration_minutes
+            day_of_week = @day_of_week, start_time = @start_time, duration_minutes = @duration_minutes,
+            weapon = @weapon
         WHERE id = @id
     `).run(template);
 
@@ -101,8 +102,8 @@ export const deleteClassTemplate = (db: Database, id: number) =>
 /** Auto-instantiate template sessions for a given date + day-of-week. */
 export const insertTemplatedSessions = (db: Database, date: string, dayOfWeek: number) =>
     db.prepare(`
-        INSERT INTO class_sessions (template_id, class_type_id, name, date, start_time, duration_minutes)
-        SELECT t.id, t.class_type_id, t.name, ?, t.start_time, t.duration_minutes
+        INSERT INTO class_sessions (template_id, class_type_id, name, date, start_time, duration_minutes, weapon)
+        SELECT t.id, t.class_type_id, t.name, ?, t.start_time, t.duration_minutes, t.weapon
         FROM class_templates t
         WHERE t.day_of_week = ?
           AND NOT EXISTS (
@@ -118,6 +119,7 @@ export const getSessionsByDate = (db: Database, date: string) =>
             s.*,
             COALESCE(s.name, t.name) as template_name,
             t.description,
+            COALESCE(s.weapon, t.weapon) as weapon,
             COALESCE(ct_direct.name, ct_template.name) as class_type_name,
             (SELECT COUNT(*) FROM class_attendees ca WHERE ca.class_session_id = s.id) as attendee_count
         FROM class_sessions s
@@ -130,20 +132,21 @@ export const getSessionsByDate = (db: Database, date: string) =>
 
 export const createClassSession = (db: Database, session: Omit<ClassSession, 'id' | 'template_name' | 'description' | 'class_type_name' | 'attendee_count'>) =>
     db.prepare(`
-        INSERT INTO class_sessions (template_id, class_type_id, name, date, start_time, duration_minutes)
-        VALUES (@template_id, @class_type_id, @name, @date, @start_time, @duration_minutes)
+        INSERT INTO class_sessions (template_id, class_type_id, name, date, start_time, duration_minutes, weapon)
+        VALUES (@template_id, @class_type_id, @name, @date, @start_time, @duration_minutes, @weapon)
     `).run(session);
 
 export const deleteClassSession = (db: Database, id: number) =>
     db.prepare('DELETE FROM class_sessions WHERE id = ?').run(id);
 
-export const updateClassSession = (db: Database, session: Pick<ClassSession, 'id' | 'name' | 'class_type_id' | 'start_time' | 'duration_minutes'>) =>
+export const updateClassSession = (db: Database, session: Pick<ClassSession, 'id' | 'name' | 'class_type_id' | 'start_time' | 'duration_minutes' | 'weapon'>) =>
     db.prepare(`
         UPDATE class_sessions
         SET name            = @name,
             class_type_id   = @class_type_id,
             start_time      = @start_time,
-            duration_minutes= @duration_minutes
+            duration_minutes= @duration_minutes,
+            weapon          = @weapon
         WHERE id = @id
     `).run(session);
 

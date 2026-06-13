@@ -21,11 +21,13 @@ export const AddSessionDialog = ({ open, onOpenChange, date }: AddSessionDialogP
     const [classTypeId, setClassTypeId] = useState<string>('');
     const [startTime, setStartTime] = useState('17:00');
     const [duration, setDuration] = useState('60');
+    const [weapon, setWeapon] = useState('none');
 
     const resetForm = () => {
         setClassTypeId('');
         setStartTime('17:00');
         setDuration('60');
+        setWeapon('none');
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -41,6 +43,7 @@ export const AddSessionDialog = ({ open, onOpenChange, date }: AddSessionDialogP
             date: format(date, 'yyyy-MM-dd'),
             start_time: startTime,
             duration_minutes: parseInt(duration) || 60,
+            weapon: weapon === 'none' || !weapon ? null : weapon,
         });
 
         resetForm();
@@ -76,6 +79,23 @@ export const AddSessionDialog = ({ open, onOpenChange, date }: AddSessionDialogP
                                                 {ct.name}
                                             </SelectItem>
                                         ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label className="text-right">Weapon</Label>
+                            <div className="col-span-3">
+                                <Select value={weapon} onValueChange={setWeapon}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="None" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">None</SelectItem>
+                                        <SelectItem value="foil">Foil</SelectItem>
+                                        <SelectItem value="epee">Epee</SelectItem>
+                                        <SelectItem value="saber">Saber</SelectItem>
+                                        <SelectItem value="all">All-Weapon</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

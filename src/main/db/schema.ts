@@ -59,6 +59,7 @@ const MIGRATIONS: Migration[] = [
                     day_of_week      INTEGER,
                     start_time       TEXT,
                     duration_minutes INTEGER,
+                    weapon           TEXT,
                     FOREIGN KEY(class_type_id) REFERENCES class_types(id)
                 );
 
@@ -70,6 +71,7 @@ const MIGRATIONS: Migration[] = [
                     date             TEXT    NOT NULL,
                     start_time       TEXT    NOT NULL,
                     duration_minutes INTEGER NOT NULL,
+                    weapon           TEXT,
                     FOREIGN KEY(template_id)   REFERENCES class_templates(id),
                     FOREIGN KEY(class_type_id) REFERENCES class_types(id)
                 );
@@ -152,6 +154,20 @@ const MIGRATIONS: Migration[] = [
       const cols = (db.pragma('table_info(class_attendees)') as { name: string }[]).map(c => c.name);
       if (!cols.includes('fraction')) {
         db.exec('ALTER TABLE class_attendees ADD COLUMN fraction REAL NOT NULL DEFAULT 1.0');
+      }
+    },
+  },
+  {
+    version: 7,
+    description: 'Add weapon column to class_templates and class_sessions',
+    up: (db) => {
+      const ctCols = (db.pragma('table_info(class_templates)') as { name: string }[]).map(c => c.name);
+      if (!ctCols.includes('weapon')) {
+        db.exec('ALTER TABLE class_templates ADD COLUMN weapon TEXT');
+      }
+      const csCols = (db.pragma('table_info(class_sessions)') as { name: string }[]).map(c => c.name);
+      if (!csCols.includes('weapon')) {
+        db.exec('ALTER TABLE class_sessions ADD COLUMN weapon TEXT');
       }
     },
   },

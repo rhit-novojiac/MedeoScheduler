@@ -3,6 +3,7 @@ import { useAttendeesForSession, useAddAttendee, useRemoveAttendee } from '../..
 import { useCoachesForSession, useAddCoach, useRemoveCoach } from '../../hooks/useCoaches';
 import { useFencers } from '../../hooks/useFencers';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Badge } from '@/components/ui/badge';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,40 @@ interface AttendanceSheetProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }
+
+const getWeaponBadge = (weapon?: string | null) => {
+    if (!weapon) return null;
+    const w = weapon.toLowerCase();
+    let bg = '';
+    let text = '';
+    let label = '';
+    
+    if (w === 'foil') {
+        bg = 'bg-blue-100 dark:bg-blue-900/30';
+        text = 'text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800';
+        label = 'Foil';
+    } else if (w === 'epee') {
+        bg = 'bg-green-100 dark:bg-green-900/30';
+        text = 'text-green-800 dark:text-green-300 border-green-200 dark:border-green-800';
+        label = 'Epee';
+    } else if (w === 'saber' || w === 'sabre') {
+        bg = 'bg-amber-100 dark:bg-amber-900/30';
+        text = 'text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800';
+        label = 'Saber';
+    } else if (w === 'all' || w === 'all-weapon') {
+        bg = 'bg-slate-100 dark:bg-slate-800/50';
+        text = 'text-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700';
+        label = 'All-Weapon';
+    } else {
+        return null;
+    }
+    
+    return (
+        <Badge variant="outline" className={`${bg} ${text} font-semibold px-2 py-0.5`}>
+            {label}
+        </Badge>
+    );
+};
 
 export const AttendanceSheet = ({ session, open, onOpenChange }: AttendanceSheetProps) => {
     const { data: attendees, isLoading: loadingAttendees } = useAttendeesForSession(session?.id || null);
@@ -63,7 +98,14 @@ export const AttendanceSheet = ({ session, open, onOpenChange }: AttendanceSheet
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent className="w-[400px] sm:w-[540px] flex flex-col pt-10 px-6">
                 <SheetHeader className="pb-6 border-b shrink-0">
-                    <SheetTitle className="text-2xl">{session.template_name || session.name || 'Ad-Hoc Session'}</SheetTitle>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <SheetTitle className="text-2xl">{session.template_name || session.name || 'Ad-Hoc Session'}</SheetTitle>
+                            <div className="flex gap-2 mt-1.5">
+                                {getWeaponBadge(session.weapon)}
+                            </div>
+                        </div>
+                    </div>
                     <SheetDescription className="text-base flex flex-col gap-1 mt-2">
                         <span>{formatTime(session.start_time)} ({session.duration_minutes} min)</span>
                         {session.class_type_name && <span className="text-primary font-medium">{session.class_type_name}</span>}

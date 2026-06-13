@@ -25,6 +25,7 @@ export interface ClassSession {
     class_type_name?: string;
     attendee_count?: number;
     description?: string;
+    weapon?: string | null;
 }
 
 export interface ClassType {
@@ -42,6 +43,7 @@ export interface ClassTemplate {
     day_of_week: number;
     start_time: string;
     duration_minutes: number;
+    weapon?: string | null;
     class_type_name?: string; // Loaded via SQL JOIN
 }
 
@@ -74,7 +76,7 @@ declare global {
 
             getOrCreateClassSessionsByDate: (date: string) => Promise<{ success: boolean; data?: ClassSession[]; error?: string }>;
             createClassSession: (session: Omit<ClassSession, 'id' | 'template_name' | 'description' | 'class_type_name'>) => Promise<{ success: boolean; data?: number; error?: string }>;
-            updateClassSession: (session: Pick<ClassSession, 'id' | 'name' | 'class_type_id' | 'start_time' | 'duration_minutes'>) => Promise<{ success: boolean; data?: boolean; error?: string }>;
+            updateClassSession: (session: Pick<ClassSession, 'id' | 'name' | 'class_type_id' | 'start_time' | 'duration_minutes' | 'weapon'>) => Promise<{ success: boolean; data?: boolean; error?: string }>;
             deleteClassSession: (id: number) => Promise<{ success: boolean; data?: boolean; error?: string }>;
             getAttendeesForSession: (sessionId: number) => Promise<{ success: boolean; data?: Fencer[]; error?: string }>;
             addAttendee: (sessionId: number, fencerId: number, fraction?: number) => Promise<{ success: boolean; data?: boolean; error?: string }>;

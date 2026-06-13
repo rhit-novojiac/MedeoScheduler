@@ -14,9 +14,43 @@ import { ConfirmDialog } from '../shared/ConfirmDialog';
 
 type DeleteFn = (args: { id: number; date: string }) => Promise<unknown>;
 type UpdateFn = (args: {
-    session: Pick<ClassSession, 'id' | 'name' | 'class_type_id' | 'start_time' | 'duration_minutes'>;
+    session: Pick<ClassSession, 'id' | 'name' | 'class_type_id' | 'start_time' | 'duration_minutes' | 'weapon'>;
     date: string;
 }) => Promise<unknown>;
+
+const getWeaponBadge = (weapon?: string | null) => {
+    if (!weapon) return null;
+    const w = weapon.toLowerCase();
+    let bg = '';
+    let text = '';
+    let label = '';
+    
+    if (w === 'foil') {
+        bg = 'bg-blue-100 dark:bg-blue-900/30';
+        text = 'text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800';
+        label = 'Foil';
+    } else if (w === 'epee') {
+        bg = 'bg-green-100 dark:bg-green-900/30';
+        text = 'text-green-800 dark:text-green-300 border-green-200 dark:border-green-800';
+        label = 'Epee';
+    } else if (w === 'saber' || w === 'sabre') {
+        bg = 'bg-amber-100 dark:bg-amber-900/30';
+        text = 'text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800';
+        label = 'Saber';
+    } else if (w === 'all' || w === 'all-weapon') {
+        bg = 'bg-slate-100 dark:bg-slate-800/50';
+        text = 'text-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700';
+        label = 'All-Weapon';
+    } else {
+        return null;
+    }
+    
+    return (
+        <Badge variant="outline" className={`${bg} ${text} font-semibold px-1.5 py-0 text-[10px] shrink-0`}>
+            {label}
+        </Badge>
+    );
+};
 
 const EditSessionDialog = ({
     open,
@@ -41,6 +75,7 @@ const EditSessionDialog = ({
     );
     const [startTime, setStartTime] = useState(session.start_time);
     const [duration, setDuration] = useState(String(session.duration_minutes));
+    const [weapon, setWeapon] = useState(session.weapon || 'none');
 
     // Re-sync whenever the dialog opens for a (possibly different) session
     useEffect(() => {
@@ -49,6 +84,7 @@ const EditSessionDialog = ({
         setClassTypeId(session.class_type_id ? String(session.class_type_id) : '');
         setStartTime(session.start_time);
         setDuration(String(session.duration_minutes));
+        setWeapon(session.weapon || 'none');
     }, [open, session]);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -60,6 +96,7 @@ const EditSessionDialog = ({
                 class_type_id: classTypeId ? parseInt(classTypeId) : null,
                 start_time: startTime,
                 duration_minutes: parseInt(duration) || session.duration_minutes,
+                weapon: weapon === 'none' || !weapon ? null : weapon,
             },
             date,
         });
@@ -106,6 +143,25 @@ const EditSessionDialog = ({
                                                 {ct.name}
                                             </SelectItem>
                                         ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        {/* Weapon select */}
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label className="text-right text-sm">Weapon</Label>
+                            <div className="col-span-3">
+                                <Select value={weapon} onValueChange={setWeapon}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="None" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">None</SelectItem>
+                                        <SelectItem value="foil">Foil</SelectItem>
+                                        <SelectItem value="epee">Epee</SelectItem>
+                                        <SelectItem value="saber">Saber</SelectItem>
+                                        <SelectItem value="all">All-Weapon</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -209,6 +265,7 @@ export const SessionCard = ({
                                 <CardTitle className="text-base leading-snug break-words">
                                     {session.name || session.template_name || 'Ad-Hoc Session'}
                                 </CardTitle>
+                                {getWeaponBadge(session.weapon)}
                                 {session.class_type_name && (
                                     <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-normal uppercase tracking-wider shrink-0 bg-secondary/30">
                                         {session.class_type_name}

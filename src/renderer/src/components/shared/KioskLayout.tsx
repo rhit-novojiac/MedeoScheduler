@@ -54,8 +54,16 @@ export const KioskLayout = () => {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedFencer, setSelectedFencer] = useState<{ id: number; name: string } | null>(null);
 
+    // Soft-login session states
+    const [sessionFencer, setSessionFencer] = useState<{ id: number; name: string } | null>(null);
+    const [sessionRegistrations, setSessionRegistrations] = useState<{ className: string; fraction: number }[]>([]);
+    const [showConfirmView, setShowConfirmView] = useState(false);
+    const [registeredSessionIds, setRegisteredSessionIds] = useState<number[]>([]);
+    const [checkedSessionIds, setCheckedSessionIds] = useState<number[]>([]);
+
     // Success overlay state
     const [successFencerName, setSuccessFencerName] = useState<string | null>(null);
+    const [finalSuccessRegistrations, setFinalSuccessRegistrations] = useState<{ className: string; fraction: number }[]>([]);
 
     // PIN dialog state for Kiosk → Admin transition
     const [pinDialogOpen, setPinDialogOpen] = useState(false);
@@ -63,6 +71,75 @@ export const KioskLayout = () => {
     const [pinError, setPinError] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
     const navigate = useNavigate();
+
+    // 10-second auto-timeout for active sessions
+    useEffect(() => {
+        if (!sessionFencer) return;
+
+        let timeoutId: NodeJS.Timeout;
+
+        const resetTimeout = () => {
+            if (timeoutId) clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                // Clear session due to inactivity
+                setSessionFencer(null);
+                setSessionRegistrations([]);
+                setShowConfirmView(false);
+                setDialogOpen(false);
+                setSelectedSession(null);
+                setSelectedFencer(null);
+                setCheckedSessionIds([]);
+                setRegisteredSessionIds([]);
+            }, 10000); // 10 seconds auto-timeout
+        };
+
+        // Reset initially
+        resetTimeout();
+
+        // Listen for user interactions to keep session alive
+        const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+        const handleInteraction = () => resetTimeout();
+        
+        events.forEach(event => {
+            window.addEventListener(event, handleInteraction);
+        });
+
+        return () => {
+            if (timeoutId) clearTimeout(timeoutId);
+            events.forEach(event => {
+                window.removeEventListener(event, handleInteraction);
+            });
+        };
+    }, [sessionFencer]);
+
+    // Fetch registered sessions for this fencer today to prevent showing them in checkbox list
+    useEffect(() => {
+        if (!selectedFencer || !sessions) {
+            setRegisteredSessionIds([]);
+            return;
+        }
+
+        const checkRegistrations = async () => {
+            const registeredIds: number[] = [];
+            for (const s of sessions) {
+                if (!s.id) continue;
+                try {
+                    const res = await window.api.getAttendeesForSession(s.id);
+                    if (res.success && res.data) {
+                        const isRegistered = res.data.some(att => att.id === selectedFencer.id);
+                        if (isRegistered) {
+                            registeredIds.push(s.id);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error checking attendees:", e);
+                }
+            }
+            setRegisteredSessionIds(registeredIds);
+        };
+
+        checkRegistrations();
+    }, [selectedFencer, sessions]);
 
     // Fetch attendees for the specific session we are looking at to prevent double sign-ins
     const { data: currentAttendees } = useAttendeesForSession(selectedSession?.id || null);
@@ -90,7 +167,12 @@ export const KioskLayout = () => {
 
     const openSignIn = (session: ClassSession) => {
         setSelectedSession(session);
-        setSelectedFencer(null);
+        if (sessionFencer) {
+            setSelectedFencer(sessionFencer);
+        } else {
+            setSelectedFencer(null);
+        }
+        setShowConfirmView(false);
         setDialogOpen(true);
     };
 
@@ -99,20 +181,61 @@ export const KioskLayout = () => {
 
         await addAttendee.mutateAsync({ sessionId: selectedSession.id, fencerId, fraction, date: todayStr });
 
-        // Trigger success animation
-        setDialogOpen(false);
-        setSelectedFencer(null);
-        setSuccessFencerName(fencerName);
-
-        // Auto-dismiss
-        setTimeout(() => {
-            setSuccessFencerName(null);
-            setSelectedSession(null);
-        }, SUCCESS_OVERLAY_DURATION_MS);
+        const className = selectedSession.template_name || selectedSession.name || 'Class';
+        setSessionRegistrations([{ className, fraction }]);
+        setSessionFencer({ id: fencerId, name: fencerName });
+        setRegisteredSessionIds(prev => [...prev, selectedSession.id]);
+        setShowConfirmView(true);
     };
 
-    // Filter out fencers who already signed in
+    const handleFinishSession = () => {
+        if (sessionFencer) {
+            setSuccessFencerName(sessionFencer.name);
+            setFinalSuccessRegistrations([...sessionRegistrations]);
+            
+            setTimeout(() => {
+                setSuccessFencerName(null);
+                setFinalSuccessRegistrations([]);
+            }, SUCCESS_OVERLAY_DURATION_MS);
+        }
+
+        setSessionFencer(null);
+        setSessionRegistrations([]);
+        setShowConfirmView(false);
+        setDialogOpen(false);
+        setSelectedSession(null);
+        setSelectedFencer(null);
+    };
+
+    const handleRegisterAnother = () => {
+        setDialogOpen(false);
+        setShowConfirmView(false);
+        setSelectedSession(null);
+        setSelectedFencer(null);
+    };
+
+    // Filter out fencers who already signed in for the active card
     const availableFencers = allFencers?.filter(f => !currentAttendees?.some(a => a.id === f.id)) || [];
+
+    // Filter available sessions for checkbox selection based on weapons
+    const fencerDetails = allFencers.find(f => f.id === selectedFencer?.id);
+    const eligibleSessions = sessions?.filter(s => {
+        if (!s.id || s.id === selectedSession?.id) return false;
+        if (registeredSessionIds.includes(s.id)) return false;
+        if (isSessionExpired(s, now)) return false;
+
+        if (!s.weapon) return true;
+        const w = s.weapon.toLowerCase();
+        if (w === 'all' || w === 'all-weapon') return true;
+
+        if (!fencerDetails) return false;
+        if (w === 'foil' && fencerDetails.is_foil === 1) return true;
+        if (w === 'epee' && fencerDetails.is_epee === 1) return true;
+        if (w === 'saber' || w === 'sabre') {
+            if (fencerDetails.is_saber === 1) return true;
+        }
+        return false;
+    }) || [];
 
     // Partition sessions into active and expired
     const activeSessions = sessions?.filter(s => !isSessionExpired(s, now)) || [];
@@ -120,6 +243,28 @@ export const KioskLayout = () => {
 
     return (
         <div className="h-screen w-full bg-background flex flex-col relative overflow-hidden selection:bg-primary/20">
+
+            {/* Active Session Banner */}
+            {sessionFencer && (
+                <div className="bg-primary/10 border-b border-primary/20 py-4 px-8 text-center flex justify-between items-center gap-4 z-20 shadow-md">
+                    <span className="text-lg font-semibold text-primary">
+                        Signing in as: <span className="font-black text-foreground text-xl ml-1">{sessionFencer.name}</span>
+                    </span>
+                    <button
+                        onClick={() => {
+                            setSessionFencer(null);
+                            setSessionRegistrations([]);
+                            setDialogOpen(false);
+                            setShowConfirmView(false);
+                            setCheckedSessionIds([]);
+                            setRegisteredSessionIds([]);
+                        }}
+                        className="text-sm bg-destructive/10 hover:bg-destructive/20 text-destructive px-4 py-2 rounded-full border border-destructive/20 transition-colors cursor-pointer font-bold"
+                    >
+                        Log Out (Clear Session)
+                    </button>
+                </div>
+            )}
 
             {/* Ambient Background */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
@@ -214,20 +359,135 @@ export const KioskLayout = () => {
             </div>
 
             {/* Sign In Dialog */}
-            <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) setSelectedFencer(null); }}>
+            <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setSelectedFencer(null); setShowConfirmView(false); } }}>
                 <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-2xl">
                     <DialogHeader className="p-8 bg-muted/30 border-b">
                         <DialogTitle className="text-3xl font-bold">
-                            {selectedFencer ? 'Select Participation' : 'Who is signing in?'}
+                            {showConfirmView 
+                                ? 'Registration Confirmed!' 
+                                : selectedFencer ? 'Select Participation' : 'Who is signing in?'}
                         </DialogTitle>
                         <DialogDescription className="text-xl mt-2">
-                            {selectedFencer 
-                                ? `Signing in: ${selectedFencer.name}` 
-                                : `${selectedSession?.template_name || ''} at ${selectedSession?.start_time ? formatTime(selectedSession.start_time) : ''}`}
+                            {showConfirmView 
+                                ? `You have signed in for class.`
+                                : selectedFencer 
+                                    ? `Signing in: ${selectedFencer.name}` 
+                                    : `${selectedSession?.template_name || ''} at ${selectedSession?.start_time ? formatTime(selectedSession.start_time) : ''}`}
                         </DialogDescription>
                     </DialogHeader>
 
-                    {!selectedFencer ? (
+                    {showConfirmView ? (
+                        <div className="p-8 space-y-6 bg-background">
+                            <div className="space-y-4">
+                                <div className="bg-green-500/10 border border-green-500/25 p-4 rounded-xl flex items-center justify-between">
+                                    <span className="text-xl font-bold text-green-600 dark:text-green-400">
+                                        Registered: {sessionRegistrations[0]?.className}
+                                    </span>
+                                    <span className="text-sm font-semibold bg-green-500/20 text-green-700 dark:text-green-300 px-3 py-1 rounded-full">
+                                        {sessionRegistrations[0]?.fraction === 1.0 ? 'Whole Class' : `${sessionRegistrations[0]?.fraction} Class`}
+                                    </span>
+                                </div>
+
+                                {eligibleSessions.length > 0 && (
+                                    <div className="space-y-3 pt-2">
+                                        <h4 className="text-lg font-bold text-muted-foreground uppercase tracking-wider">Other Eligible Classes Today:</h4>
+                                        <p className="text-sm text-muted-foreground">Select any other classes you wish to register for (inherits {sessionRegistrations[0]?.fraction === 1.0 ? 'Whole Class' : `${sessionRegistrations[0]?.fraction} Class`}):</p>
+                                        <div className="space-y-2 max-h-[30vh] overflow-y-auto pr-1">
+                                            {eligibleSessions.map(session => {
+                                                const isChecked = checkedSessionIds.includes(session.id!);
+                                                return (
+                                                    <label
+                                                        key={session.id}
+                                                        className={`flex items-center gap-3 p-4 rounded-xl border transition-colors cursor-pointer select-none ${isChecked ? 'bg-primary/5 border-primary' : 'bg-card hover:bg-muted/30 border-border/40'}`}
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isChecked}
+                                                            onChange={() => {
+                                                                setCheckedSessionIds(prev => 
+                                                                    isChecked 
+                                                                        ? prev.filter(id => id !== session.id) 
+                                                                        : [...prev, session.id!]
+                                                                );
+                                                            }}
+                                                            className="w-6 h-6 rounded border-gray-300 text-primary focus:ring-primary accent-primary shrink-0"
+                                                        />
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="font-bold text-lg truncate">{session.template_name || session.name}</div>
+                                                            <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                                                <span>{formatTime(session.start_time)} ({session.duration_minutes}m)</span>
+                                                                {session.weapon && <span className="uppercase text-[10px] font-extrabold px-1.5 py-0.2 bg-muted rounded border">{session.weapon}</span>}
+                                                            </div>
+                                                        </div>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                                <button
+                                    onClick={() => {
+                                        setSessionFencer(null);
+                                        setSessionRegistrations([]);
+                                        setShowConfirmView(false);
+                                        setDialogOpen(false);
+                                        setSelectedSession(null);
+                                        setSelectedFencer(null);
+                                        setCheckedSessionIds([]);
+                                        setRegisteredSessionIds([]);
+                                    }}
+                                    className="h-16 rounded-xl bg-secondary hover:bg-secondary/80 text-secondary-foreground font-bold text-lg transition-colors cursor-pointer border border-border/50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        if (selectedFencer) {
+                                            const fencerId = selectedFencer.id;
+                                            const fencerName = selectedFencer.name;
+                                            const fraction = sessionRegistrations[0]?.fraction || 1.0;
+                                            const newRegs = [...sessionRegistrations];
+
+                                            for (const id of checkedSessionIds) {
+                                                const s = eligibleSessions.find(es => es.id === id);
+                                                if (!s) continue;
+                                                const className = s.template_name || s.name || 'Class';
+                                                try {
+                                                    await addAttendee.mutateAsync({ sessionId: id, fencerId, fraction, date: todayStr });
+                                                    newRegs.push({ className, fraction });
+                                                } catch (e) {
+                                                    console.error("Failed to register extra session", id, e);
+                                                }
+                                            }
+
+                                            setSuccessFencerName(fencerName);
+                                            setFinalSuccessRegistrations(newRegs);
+
+                                            setTimeout(() => {
+                                                setSuccessFencerName(null);
+                                                setFinalSuccessRegistrations([]);
+                                            }, SUCCESS_OVERLAY_DURATION_MS);
+                                        }
+
+                                        setSessionFencer(null);
+                                        setSessionRegistrations([]);
+                                        setShowConfirmView(false);
+                                        setDialogOpen(false);
+                                        setSelectedSession(null);
+                                        setSelectedFencer(null);
+                                        setCheckedSessionIds([]);
+                                        setRegisteredSessionIds([]);
+                                    }}
+                                    className="h-16 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg transition-colors cursor-pointer border border-primary/20 shadow-md"
+                                >
+                                    Confirm Sign In
+                                </button>
+                            </div>
+                        </div>
+                    ) : !selectedFencer ? (
                         <Command className="border-0 rounded-none bg-background">
                             <div className="flex items-center border-b px-6 py-4">
                                 <Search className="mr-4 h-6 w-6 shrink-0 opacity-50" />
@@ -292,7 +552,13 @@ export const KioskLayout = () => {
                             <div className="flex justify-end pt-4 border-t mt-4">
                                 <Button
                                     variant="ghost"
-                                    onClick={() => setSelectedFencer(null)}
+                                    onClick={() => {
+                                        if (sessionFencer) {
+                                            setShowConfirmView(true);
+                                        } else {
+                                            setSelectedFencer(null);
+                                        }
+                                    }}
                                     className="text-lg px-6 h-12"
                                 >
                                     Go Back
@@ -354,15 +620,29 @@ export const KioskLayout = () => {
                             initial={{ scale: 0.5, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ type: "spring", damping: 15, stiffness: 200, delay: 0.1 }}
-                            className="flex flex-col items-center text-center px-6"
+                            className="flex flex-col items-center text-center px-6 w-full max-w-lg"
                         >
-                            <div className="w-32 h-32 rounded-full bg-green-500/20 flex items-center justify-center mb-8">
-                                <CheckCircle className="w-20 h-20 text-green-500" />
+                            <div className="w-24 h-24 rounded-full bg-green-500/20 flex items-center justify-center mb-6">
+                                <CheckCircle className="w-16 h-16 text-green-500" />
                             </div>
-                            <h2 className="text-5xl font-black mb-4">You're Signed In!</h2>
-                            <p className="text-3xl text-muted-foreground">
+                            <h2 className="text-4xl font-black mb-2">You're Signed In!</h2>
+                            <p className="text-2xl text-muted-foreground mb-6">
                                 Have a great class, <span className="text-foreground font-bold">{successFencerName}</span>.
                             </p>
+                            
+                            {finalSuccessRegistrations.length > 0 && (
+                                <div className="w-full bg-muted/30 border p-4 rounded-2xl space-y-2 text-left">
+                                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest border-b pb-2 mb-2">Registrations:</h4>
+                                    {finalSuccessRegistrations.map((reg, idx) => (
+                                        <div key={idx} className="flex justify-between items-center text-sm font-medium">
+                                            <span>{reg.className}</span>
+                                            <span className="text-xs bg-primary/15 text-primary px-2.5 py-0.5 rounded-full font-bold">
+                                                {reg.fraction === 1.0 ? 'Whole' : `${reg.fraction}`}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </motion.div>
                     </motion.div>
                 )}

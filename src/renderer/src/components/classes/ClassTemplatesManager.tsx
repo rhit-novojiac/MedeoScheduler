@@ -25,6 +25,40 @@ const DAYS_OF_WEEK = [
     { value: '6', label: 'Saturday' },
 ];
 
+const getWeaponBadge = (weapon?: string | null) => {
+    if (!weapon) return null;
+    const w = weapon.toLowerCase();
+    let bg = '';
+    let text = '';
+    let label = '';
+    
+    if (w === 'foil') {
+        bg = 'bg-blue-100 dark:bg-blue-900/30';
+        text = 'text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800';
+        label = 'Foil';
+    } else if (w === 'epee') {
+        bg = 'bg-green-100 dark:bg-green-900/30';
+        text = 'text-green-800 dark:text-green-300 border-green-200 dark:border-green-800';
+        label = 'Epee';
+    } else if (w === 'saber' || w === 'sabre') {
+        bg = 'bg-amber-100 dark:bg-amber-900/30';
+        text = 'text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800';
+        label = 'Saber';
+    } else if (w === 'all' || w === 'all-weapon') {
+        bg = 'bg-slate-100 dark:bg-slate-800/50';
+        text = 'text-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700';
+        label = 'All-Weapon';
+    } else {
+        return null;
+    }
+    
+    return (
+        <Badge variant="outline" className={`${bg} ${text} font-semibold px-1.5 py-0 text-[10px] shrink-0`}>
+            {label}
+        </Badge>
+    );
+};
+
 const TemplateRowActions = ({ template, onUpdate, onDelete }: { template: ClassTemplate; onUpdate: (data: Omit<ClassTemplate, 'class_type_name'>) => Promise<unknown>; onDelete: (id: number) => Promise<unknown> }) => {
     const { data: classTypes } = useClassTypes();
 
@@ -36,6 +70,7 @@ const TemplateRowActions = ({ template, onUpdate, onDelete }: { template: ClassT
     const [startTime, setStartTime] = useState(template.start_time);
     const [duration, setDuration] = useState(template.duration_minutes.toString());
     const [description, setDescription] = useState(template.description || '');
+    const [weapon, setWeapon] = useState(template.weapon || 'none');
 
     useEffect(() => {
         if (!editOpen) return;
@@ -45,6 +80,7 @@ const TemplateRowActions = ({ template, onUpdate, onDelete }: { template: ClassT
         setStartTime(template.start_time);
         setDuration(template.duration_minutes.toString());
         setDescription(template.description || '');
+        setWeapon(template.weapon || 'none');
     }, [editOpen, template]);
 
     const handleUpdate = async (e: React.FormEvent) => {
@@ -57,6 +93,7 @@ const TemplateRowActions = ({ template, onUpdate, onDelete }: { template: ClassT
             day_of_week: parseInt(dayOfWeek),
             start_time: startTime,
             duration_minutes: parseInt(duration),
+            weapon: weapon === 'none' || !weapon ? null : weapon,
         });
         setEditOpen(false);
     };
@@ -128,6 +165,21 @@ const TemplateRowActions = ({ template, onUpdate, onDelete }: { template: ClassT
                                 </div>
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right">Weapon</Label>
+                                <div className="col-span-3">
+                                    <Select value={weapon} onValueChange={setWeapon}>
+                                        <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="none">None</SelectItem>
+                                            <SelectItem value="foil">Foil</SelectItem>
+                                            <SelectItem value="epee">Epee</SelectItem>
+                                            <SelectItem value="saber">Saber</SelectItem>
+                                            <SelectItem value="all">All-Weapon</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="tTimeEdit" className="text-right">Start Time</Label>
                                 <Input id="tTimeEdit" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="col-span-3" required />
                             </div>
@@ -172,6 +224,7 @@ export const ClassTemplatesManager = () => {
     const [startTime, setStartTime] = useState('17:00');
     const [duration, setDuration] = useState('60');
     const [description, setDescription] = useState('');
+    const [weapon, setWeapon] = useState('none');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -182,11 +235,13 @@ export const ClassTemplatesManager = () => {
             day_of_week: parseInt(dayOfWeek),
             start_time: startTime,
             duration_minutes: parseInt(duration),
+            weapon: weapon === 'none' || !weapon ? null : weapon,
         });
         setOpen(false);
         // Soft reset
         setName('');
         setDescription('');
+        setWeapon('none');
     };
 
     const totalPages = Math.ceil(totalTemplates / pageSize) || 1;
@@ -238,6 +293,21 @@ export const ClassTemplatesManager = () => {
                                                 {DAYS_OF_WEEK.map(day => (
                                                     <SelectItem key={day.value} value={day.value}>{day.label}</SelectItem>
                                                 ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label className="text-right">Weapon</Label>
+                                    <div className="col-span-3">
+                                        <Select value={weapon} onValueChange={setWeapon}>
+                                            <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="none">None</SelectItem>
+                                                <SelectItem value="foil">Foil</SelectItem>
+                                                <SelectItem value="epee">Epee</SelectItem>
+                                                <SelectItem value="saber">Saber</SelectItem>
+                                                <SelectItem value="all">All-Weapon</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -295,7 +365,10 @@ export const ClassTemplatesManager = () => {
                                         <span className="text-xs opacity-70">{t.duration_minutes}m</span>
                                     </TableCell>
                                     <TableCell className="min-w-0">
-                                        <div className="font-medium text-foreground break-words">{t.name}</div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="font-medium text-foreground break-words">{t.name}</div>
+                                            {getWeaponBadge(t.weapon)}
+                                        </div>
                                         <div className="text-xs text-muted-foreground truncate">{t.class_type_name}</div>
                                     </TableCell>
                                     <TableCell>

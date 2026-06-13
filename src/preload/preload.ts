@@ -20,7 +20,7 @@ const api = {
 
     getOrCreateClassSessionsByDate: (date: string) => ipcRenderer.invoke('getOrCreateClassSessionsByDate', date),
     createClassSession: (session: Omit<ClassSession, 'id' | 'template_name' | 'description' | 'class_type_name'>) => ipcRenderer.invoke('createClassSession', session),
-    updateClassSession: (session: Pick<ClassSession, 'id' | 'name' | 'class_type_id' | 'start_time' | 'duration_minutes'>) => ipcRenderer.invoke('updateClassSession', session),
+    updateClassSession: (session: Pick<ClassSession, 'id' | 'name' | 'class_type_id' | 'start_time' | 'duration_minutes' | 'weapon'>) => ipcRenderer.invoke('updateClassSession', session),
     deleteClassSession: (id: number) => ipcRenderer.invoke('deleteClassSession', id),
     getAttendeesForSession: (sessionId: number) => ipcRenderer.invoke('getAttendeesForSession', sessionId),
 
