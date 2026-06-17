@@ -72,7 +72,14 @@ export const useClassSessionsByDate = (date: string) => {
             const { data: sessions, error: fetchErr } = await supabase
                 .from('class_sessions')
                 .select(`
-                    *,
+                    id,
+                    template_id,
+                    class_type_id,
+                    name,
+                    date,
+                    start_time,
+                    duration_minutes,
+                    weapon,
                     class_templates (
                         name,
                         description,

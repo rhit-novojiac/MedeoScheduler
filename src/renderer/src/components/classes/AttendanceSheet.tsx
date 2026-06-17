@@ -79,13 +79,13 @@ export const AttendanceSheet = ({ session, open, onOpenChange }: AttendanceSheet
 
     const handleAdd = async (fencerId: string) => {
         if (!session.id) return;
-        await addAttendee.mutateAsync({ sessionId: session.id, fencerId });
+        await addAttendee.mutateAsync({ sessionId: session.id, fencerId, date: session.date });
         setComboboxOpen(false);
     };
 
     const handleRemove = async (fencerId: string) => {
         if (!session.id) return;
-        await removeAttendee.mutateAsync({ sessionId: session.id, fencerId });
+        await removeAttendee.mutateAsync({ sessionId: session.id, fencerId, date: session.date });
     };
 
     const handleAddCoach = async (coachId: string) => {
