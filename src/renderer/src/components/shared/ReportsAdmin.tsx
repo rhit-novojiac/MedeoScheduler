@@ -7,6 +7,15 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { DateRange } from 'react-day-picker';
+import { supabase } from '../../lib/supabase';
+
+const escapeCsvCell = (val: string | number) => {
+    const str = String(val);
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+};
 
 export const ReportsAdmin = () => {
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
@@ -29,7 +38,113 @@ export const ReportsAdmin = () => {
         const endStr = format(dateRange.to, 'yyyy-MM-dd');
 
         try {
-            const result = await window.api.generateExportCsv(startStr, endStr);
+            // 1. Fetch Class Types
+            const { data: classTypesData, error: ctErr } = await supabase
+                .from('class_types')
+                .select('id, name')
+                .order('name', { ascending: true });
+            if (ctErr) throw ctErr;
+
+            // 2. Fetch Fencers
+            const { data: fencersData, error: fErr } = await supabase
+                .from('fencers')
+                .select('id, first_name, last_name, usaf_id, last_membership_renewal')
+                .order('last_name', { ascending: true })
+                .order('first_name', { ascending: true });
+            if (fErr) throw fErr;
+
+            // 3. Fetch Class Sessions in Date Range
+            const { data: sessionsData, error: sErr } = await supabase
+                .from('class_sessions')
+                .select(`
+                    id,
+                    class_type_id,
+                    class_templates (
+                        class_type_id
+                    )
+                `)
+                .gte('date', startStr)
+                .lte('date', endStr);
+            if (sErr) throw sErr;
+
+            const sessionIds = (sessionsData || []).map(s => s.id);
+            let attendeesData: any[] = [];
+            
+            if (sessionIds.length > 0) {
+                // 4. Fetch Attendances
+                const { data: attData, error: aErr } = await supabase
+                    .from('class_attendees')
+                    .select('class_session_id, fencer_id, fraction')
+                    .in('class_session_id', sessionIds);
+                if (aErr) throw aErr;
+                attendeesData = attData || [];
+            }
+
+            // Map class_session_id to class_type_id
+            const sessionToTypeMap = new Map<string, string>();
+            for (const s of sessionsData || []) {
+                const ctId = s.class_type_id || s.class_templates?.class_type_id;
+                if (ctId) {
+                    sessionToTypeMap.set(s.id, ctId);
+                }
+            }
+
+            // Aggregate attendance counts by fencer and class type
+            const attendeeCounts = new Map<string, Map<string, number>>();
+            for (const row of attendeesData) {
+                const ctId = sessionToTypeMap.get(row.class_session_id);
+                if (!ctId) continue;
+
+                if (!attendeeCounts.has(row.fencer_id)) {
+                    attendeeCounts.set(row.fencer_id, new Map<string, number>());
+                }
+                const fMap = attendeeCounts.get(row.fencer_id)!;
+                const currentVal = fMap.get(ctId) || 0;
+                fMap.set(ctId, currentVal + (row.fraction || 1.0));
+            }
+
+            const headers = ['First Name', 'Last Name', 'USAF ID'];
+            for (const ct of classTypesData || []) {
+                headers.push(ct.name);
+            }
+            headers.push('Member Status');
+
+            const rows: string[][] = [headers.map(escapeCsvCell)];
+            const exportDateObj = new Date(endStr);
+
+            for (const fencer of fencersData || []) {
+                if (!attendeeCounts.has(fencer.id)) continue;
+                const counts = attendeeCounts.get(fencer.id)!;
+
+                let isMember = 'No';
+                if (fencer.last_membership_renewal) {
+                    const renewalDate = new Date(fencer.last_membership_renewal);
+                    const expiryDate = new Date(renewalDate);
+                    expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+                    if (exportDateObj <= expiryDate) {
+                        isMember = 'Yes';
+                    }
+                }
+
+                const row: (string | number)[] = [fencer.first_name, fencer.last_name, fencer.usaf_id || 0];
+                for (const ct of classTypesData || []) {
+                    const rawVal = counts.get(ct.id) || 0;
+                    const roundedVal = Math.round(rawVal * 100) / 100;
+                    row.push(roundedVal);
+                }
+                row.push(isMember);
+                rows.push(row.map(escapeCsvCell));
+            }
+
+            if (rows.length === 1) {
+                setExportMessage({ type: 'error', text: 'No attendance data found for the selected period.' });
+                return;
+            }
+
+            const csvString = rows.map(r => r.join(',')).join('\n');
+            const defaultFilename = `Medeo_Attendance_${startStr}_to_${endStr}.csv`;
+
+            const result = await window.api.generateExportCsv(csvString, defaultFilename);
             if (result.success) {
                 setExportMessage({ type: 'success', text: 'Export successful!' });
             } else {

@@ -1,13 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ClassType } from '@preload/index';
+import { supabase } from '../lib/supabase';
 
 export const useClassTypes = () => {
     return useQuery({
         queryKey: ['classTypes'],
         queryFn: async () => {
-            const result = await window.api.getClassTypes();
-            if (!result.success) throw new Error(result.error);
-            return result.data || [];
+            const { data, error } = await supabase
+                .from('class_types')
+                .select('*')
+                .order('name', { ascending: true });
+            if (error) throw error;
+            return (data || []) as ClassType[];
         },
     });
 };
@@ -16,9 +20,17 @@ export const useCreateClassType = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: async (classType: Omit<ClassType, 'id'>) => {
-            const result = await window.api.createClassType(classType);
-            if (!result.success) throw new Error(result.error);
-            return result.data;
+            const { data, error } = await supabase
+                .from('class_types')
+                .insert({
+                    name: classType.name,
+                    member_price: classType.member_price,
+                    non_member_price: classType.non_member_price
+                })
+                .select('id')
+                .single();
+            if (error) throw error;
+            return data.id;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['classTypes'] });
@@ -33,9 +45,16 @@ export const useUpdateClassType = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: async (classType: ClassType) => {
-            const result = await window.api.updateClassType(classType);
-            if (!result.success) throw new Error(result.error);
-            return result.data;
+            const { error } = await supabase
+                .from('class_types')
+                .update({
+                    name: classType.name,
+                    member_price: classType.member_price,
+                    non_member_price: classType.non_member_price
+                })
+                .eq('id', classType.id);
+            if (error) throw error;
+            return true;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['classTypes'] });
@@ -49,10 +68,13 @@ export const useUpdateClassType = () => {
 export const useDeleteClassType = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (id: number) => {
-            const result = await window.api.deleteClassType(id);
-            if (!result.success) throw new Error(result.error);
-            return result.data;
+        mutationFn: async (id: string) => {
+            const { error } = await supabase
+                .from('class_types')
+                .delete()
+                .eq('id', id);
+            if (error) throw error;
+            return true;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['classTypes'] });

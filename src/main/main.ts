@@ -1,7 +1,5 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
-import { initDb } from './db/connection';
-import { runMigrations } from './db/schema';
 import { registerIpcHandlers } from './ipc/handlers';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -34,8 +32,6 @@ const createWindow = () => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', () => {
-    initDb();
-    runMigrations();
     registerIpcHandlers();
     createWindow();
 });

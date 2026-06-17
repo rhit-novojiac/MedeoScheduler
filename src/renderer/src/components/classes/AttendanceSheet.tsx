@@ -11,7 +11,7 @@ import { Check, ChevronsUpDown, X, User, GraduationCap } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { cn, formatTime } from '@/lib/utils';
-import type { ClassSession } from '@preload/index';
+import type { ClassSession, Fencer } from '@preload/index';
 
 interface AttendanceSheetProps {
     session: ClassSession | null;
@@ -53,6 +53,11 @@ const getWeaponBadge = (weapon?: string | null) => {
     );
 };
 
+const isOpenBouting = (sessionName?: string | null, templateName?: string | null): boolean => {
+    const name = (sessionName || templateName || '').toLowerCase();
+    return name.includes('open fencing') || name.includes('open bouting');
+};
+
 export const AttendanceSheet = ({ session, open, onOpenChange }: AttendanceSheetProps) => {
     const { data: attendees, isLoading: loadingAttendees } = useAttendeesForSession(session?.id || null);
     const { data: coaches, isLoading: loadingCoaches } = useCoachesForSession(session?.id || null);
@@ -68,28 +73,28 @@ export const AttendanceSheet = ({ session, open, onOpenChange }: AttendanceSheet
     if (!session) return null;
 
     // Filter out fencers who are already in the session as attendees
-    const availableFencers = fencers?.filter(f => !attendees?.some(a => a.id === f.id)) || [];
+    const availableFencers = (fencers?.items || []).filter((f: Fencer) => !attendees?.some(a => a.id === f.id));
     // Filter out fencers who are already coaches for this session
-    const availableCoaches = fencers?.filter(f => !coaches?.some(c => c.id === f.id)) || [];
+    const availableCoaches = (fencers?.items || []).filter((f: Fencer) => !coaches?.some(c => c.id === f.id));
 
-    const handleAdd = async (fencerId: number) => {
+    const handleAdd = async (fencerId: string) => {
         if (!session.id) return;
         await addAttendee.mutateAsync({ sessionId: session.id, fencerId });
         setComboboxOpen(false);
     };
 
-    const handleRemove = async (fencerId: number) => {
+    const handleRemove = async (fencerId: string) => {
         if (!session.id) return;
         await removeAttendee.mutateAsync({ sessionId: session.id, fencerId });
     };
 
-    const handleAddCoach = async (coachId: number) => {
+    const handleAddCoach = async (coachId: string) => {
         if (!session.id) return;
         await addCoach.mutateAsync({ sessionId: session.id, coachId });
         setCoachComboboxOpen(false);
     };
 
-    const handleRemoveCoach = async (coachId: number) => {
+    const handleRemoveCoach = async (coachId: string) => {
         if (!session.id) return;
         await removeCoach.mutateAsync({ sessionId: session.id, coachId });
     };
@@ -135,7 +140,7 @@ export const AttendanceSheet = ({ session, open, onOpenChange }: AttendanceSheet
                                         <CommandList>
                                             <CommandEmpty>No fencer found.</CommandEmpty>
                                             <CommandGroup>
-                                                {availableCoaches.map((fencer) => (
+                                                {availableCoaches.map((fencer: Fencer) => (
                                                     <CommandItem
                                                         key={fencer.id}
                                                         value={`${fencer.last_name} ${fencer.first_name}`}
@@ -194,7 +199,7 @@ export const AttendanceSheet = ({ session, open, onOpenChange }: AttendanceSheet
                                     <CommandList>
                                         <CommandEmpty>No fencer found.</CommandEmpty>
                                         <CommandGroup>
-                                            {availableFencers.map((fencer) => (
+                                            {availableFencers.map((fencer: Fencer) => (
                                                 <CommandItem
                                                     key={fencer.id}
                                                     value={`${fencer.last_name} ${fencer.first_name}`}
@@ -227,23 +232,27 @@ export const AttendanceSheet = ({ session, open, onOpenChange }: AttendanceSheet
                                         <div className="flex flex-col gap-1">
                                             <div className="font-medium text-sm">{a.last_name}, {a.first_name}</div>
                                             <div className="text-xs text-muted-foreground">
-                                                Participation: {a.fraction === 1.0 ? 'Whole' : a.fraction === 0.67 ? '2/3' : a.fraction === 0.50 ? '1/2' : '1/3'} Class
+                                                {isOpenBouting(session.name, session.template_name) ? 'Open Bouting Attendance' : `Participation: ${a.fraction === 1.0 ? 'Whole' : a.fraction === 0.67 ? '2/3' : a.fraction === 0.50 ? '1/2' : '1/3'} Class`}
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <select
-                                                value={a.fraction ?? 1.0}
-                                                onChange={async (e) => {
-                                                    const fraction = parseFloat(e.target.value);
-                                                    await addAttendee.mutateAsync({ sessionId: session.id, fencerId: a.id, fraction });
-                                                }}
-                                                className="bg-background text-foreground border border-border/50 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer font-medium"
-                                            >
-                                                <option value="1" className="bg-background text-foreground">Whole Class</option>
-                                                <option value="0.67" className="bg-background text-foreground">2/3 Class</option>
-                                                <option value="0.5" className="bg-background text-foreground">1/2 Class</option>
-                                                <option value="0.33" className="bg-background text-foreground">1/3 Class</option>
-                                            </select>
+                                            {isOpenBouting(session.name, session.template_name) ? (
+                                                <span className="text-xs font-semibold bg-muted text-muted-foreground px-2.5 py-1 rounded border">Whole Class</span>
+                                            ) : (
+                                                <select
+                                                    value={a.fraction ?? 1.0}
+                                                    onChange={async (e) => {
+                                                        const fraction = parseFloat(e.target.value);
+                                                        await addAttendee.mutateAsync({ sessionId: session.id, fencerId: a.id, fraction });
+                                                    }}
+                                                    className="bg-background text-foreground border border-border/50 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer font-medium"
+                                                >
+                                                    <option value="1" className="bg-background text-foreground">Whole Class</option>
+                                                    <option value="0.67" className="bg-background text-foreground">2/3 Class</option>
+                                                    <option value="0.5" className="bg-background text-foreground">1/2 Class</option>
+                                                    <option value="0.33" className="bg-background text-foreground">1/3 Class</option>
+                                                </select>
+                                            )}
                                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleRemove(a.id)}>
                                                 <X className="w-4 h-4" />
                                             </Button>

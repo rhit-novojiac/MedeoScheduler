@@ -34,11 +34,11 @@ export const AddSessionDialog = ({ open, onOpenChange, date }: AddSessionDialogP
         e.preventDefault();
         if (!classTypeId) return;
 
-        const selectedType = classTypes?.find(ct => ct.id === parseInt(classTypeId));
+        const selectedType = classTypes?.find(ct => ct.id === classTypeId);
 
         await createSession.mutateAsync({
             template_id: null,
-            class_type_id: parseInt(classTypeId),
+            class_type_id: classTypeId,
             name: selectedType?.name || 'Ad-Hoc Session',
             date: format(date, 'yyyy-MM-dd'),
             start_time: startTime,

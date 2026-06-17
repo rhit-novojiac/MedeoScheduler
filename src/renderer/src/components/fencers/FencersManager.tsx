@@ -47,9 +47,9 @@ const FencerRowActions = ({ fencer, onUpdate }: { fencer: Fencer; onUpdate: (dat
     const [usafId, setUsafId] = useState(fencer.usaf_id.toString());
     const [sex, setSex] = useState(fencer.sex || 'M');
     const [lastMembershipRenewal, setLastMembershipRenewal] = useState(fencer.last_membership_renewal || '');
-    const [isFoil, setIsFoil] = useState(fencer.is_foil === 1);
-    const [isEpee, setIsEpee] = useState(fencer.is_epee === 1);
-    const [isSaber, setIsSaber] = useState(fencer.is_saber === 1);
+    const [isFoil, setIsFoil] = useState(!!fencer.is_foil);
+    const [isEpee, setIsEpee] = useState(!!fencer.is_epee);
+    const [isSaber, setIsSaber] = useState(!!fencer.is_saber);
 
     useEffect(() => {
         if (!editOpen) return;
@@ -59,9 +59,9 @@ const FencerRowActions = ({ fencer, onUpdate }: { fencer: Fencer; onUpdate: (dat
         setUsafId(fencer.usaf_id.toString());
         setSex(fencer.sex || 'M');
         setLastMembershipRenewal(fencer.last_membership_renewal || '');
-        setIsFoil(fencer.is_foil === 1);
-        setIsEpee(fencer.is_epee === 1);
-        setIsSaber(fencer.is_saber === 1);
+        setIsFoil(!!fencer.is_foil);
+        setIsEpee(!!fencer.is_epee);
+        setIsSaber(!!fencer.is_saber);
     }, [editOpen, fencer]);
 
     const handleUpdate = async (e: React.FormEvent) => {
@@ -74,9 +74,9 @@ const FencerRowActions = ({ fencer, onUpdate }: { fencer: Fencer; onUpdate: (dat
             usaf_id: parseInt(usafId) || fencer.usaf_id,
             sex: sex || null,
             last_membership_renewal: lastMembershipRenewal || null,
-            is_foil: isFoil ? 1 : 0,
-            is_epee: isEpee ? 1 : 0,
-            is_saber: isSaber ? 1 : 0
+            is_foil: isFoil,
+            is_epee: isEpee,
+            is_saber: isSaber
         });
         setEditOpen(false);
     };
@@ -191,9 +191,9 @@ export const FencersManager = () => {
             usaf_id: parseInt(usafId) || 0,
             sex,
             last_membership_renewal: lastMembershipRenewal || null,
-            is_foil: isFoil ? 1 : 0,
-            is_epee: isEpee ? 1 : 0,
-            is_saber: isSaber ? 1 : 0
+            is_foil: isFoil,
+            is_epee: isEpee,
+            is_saber: isSaber
         });
         setAddOpen(false);
         // Reset
@@ -328,9 +328,9 @@ export const FencersManager = () => {
                                         <TableCell className="text-xs text-muted-foreground">{f.last_membership_renewal || '—'}</TableCell>
                                         <TableCell>
                                             <div className="flex gap-1">
-                                                {f.is_foil === 1 && <Badge variant="outline" className="px-1 text-[10px] h-4">F</Badge>}
-                                                {f.is_epee === 1 && <Badge variant="outline" className="px-1 text-[10px] h-4">E</Badge>}
-                                                {f.is_saber === 1 && <Badge variant="outline" className="px-1 text-[10px] h-4">S</Badge>}
+                                                {f.is_foil && <Badge variant="outline" className="px-1 text-[10px] h-4">F</Badge>}
+                                                {f.is_epee && <Badge variant="outline" className="px-1 text-[10px] h-4">E</Badge>}
+                                                {f.is_saber && <Badge variant="outline" className="px-1 text-[10px] h-4">S</Badge>}
                                             </div>
                                         </TableCell>
                                         <TableCell>

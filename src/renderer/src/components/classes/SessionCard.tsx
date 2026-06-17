@@ -12,7 +12,7 @@ import { formatTime } from '@/lib/utils';
 import type { ClassSession, ClassType } from '@preload/index';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
 
-type DeleteFn = (args: { id: number; date: string }) => Promise<unknown>;
+type DeleteFn = (args: { id: string; date: string }) => Promise<unknown>;
 type UpdateFn = (args: {
     session: Pick<ClassSession, 'id' | 'name' | 'class_type_id' | 'start_time' | 'duration_minutes' | 'weapon'>;
     date: string;
@@ -93,7 +93,7 @@ const EditSessionDialog = ({
             session: {
                 id: session.id,
                 name: name || null,
-                class_type_id: classTypeId ? parseInt(classTypeId) : null,
+                class_type_id: classTypeId || null,
                 start_time: startTime,
                 duration_minutes: parseInt(duration) || session.duration_minutes,
                 weapon: weapon === 'none' || !weapon ? null : weapon,

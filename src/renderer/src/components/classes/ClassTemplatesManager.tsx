@@ -59,7 +59,7 @@ const getWeaponBadge = (weapon?: string | null) => {
     );
 };
 
-const TemplateRowActions = ({ template, onUpdate, onDelete }: { template: ClassTemplate; onUpdate: (data: Omit<ClassTemplate, 'class_type_name'>) => Promise<unknown>; onDelete: (id: number) => Promise<unknown> }) => {
+const TemplateRowActions = ({ template, onUpdate, onDelete }: { template: ClassTemplate; onUpdate: (data: Omit<ClassTemplate, 'class_type_name'>) => Promise<unknown>; onDelete: (id: string) => Promise<unknown> }) => {
     const { data: classTypes } = useClassTypes();
 
     const [editOpen, setEditOpen] = useState(false);
@@ -87,7 +87,7 @@ const TemplateRowActions = ({ template, onUpdate, onDelete }: { template: ClassT
         e.preventDefault();
         await onUpdate({
             id: template.id,
-            class_type_id: parseInt(typeId),
+            class_type_id: typeId,
             name: name,
             description: description || null,
             day_of_week: parseInt(dayOfWeek),
@@ -229,7 +229,7 @@ export const ClassTemplatesManager = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         await createTemplate.mutateAsync({
-            class_type_id: parseInt(typeId),
+            class_type_id: typeId,
             name: name,
             description: description || null,
             day_of_week: parseInt(dayOfWeek),

@@ -27,7 +27,7 @@ export const AddEventDialog: React.FC<AddEventDialogProps> = ({ open, onOpenChan
     const [type, setType] = useState('holiday');
     const [cancelsClasses, setCancelsClasses] = useState(false);
     const [isAnnual, setIsAnnual] = useState(false);
-    const [excludedClassIds, setExcludedClassIds] = useState<number[]>([]);
+    const [excludedClassIds, setExcludedClassIds] = useState<string[]>([]);
 
     useEffect(() => {
         if (open) {
@@ -39,7 +39,7 @@ export const AddEventDialog: React.FC<AddEventDialogProps> = ({ open, onOpenChan
         }
     }, [open]);
 
-    const handleToggleExcluded = (sessionId: number) => {
+    const handleToggleExcluded = (sessionId: string) => {
         setExcludedClassIds(prev =>
             prev.includes(sessionId) ? prev.filter(id => id !== sessionId) : [...prev, sessionId]
         );
@@ -52,10 +52,10 @@ export const AddEventDialog: React.FC<AddEventDialogProps> = ({ open, onOpenChan
             name: name.trim(),
             type,
             date: formattedDate,
-            cancels_classes: cancelsClasses ? 1 : 0,
-            is_annual: isAnnual ? 1 : 0,
+            cancels_classes: cancelsClasses,
+            is_annual: isAnnual,
             excluded_class_ids: cancelsClasses && excludedClassIds.length > 0
-                ? JSON.stringify(excludedClassIds)
+                ? excludedClassIds
                 : null
         });
 
