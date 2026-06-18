@@ -12,9 +12,15 @@ const createWindow = () => {
     const mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
+        show: false,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
         },
+    });
+
+    // Show the window only when it is ready to prevent a white screen flash
+    mainWindow.once('ready-to-show', () => {
+        mainWindow.show();
     });
 
     // and load the index.html of the app.
