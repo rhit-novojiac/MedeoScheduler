@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS fencers (
     is_foil BOOLEAN NOT NULL DEFAULT false, -- Upgraded from INTEGER
     is_epee BOOLEAN NOT NULL DEFAULT false,
     is_saber BOOLEAN NOT NULL DEFAULT false,
+    coach_role TEXT NOT NULL DEFAULT 'NONE' CHECK (coach_role IN ('NONE', 'TEMPORARY', 'FULL')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );

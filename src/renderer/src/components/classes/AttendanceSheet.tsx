@@ -74,8 +74,8 @@ export const AttendanceSheet = ({ session, open, onOpenChange }: AttendanceSheet
 
     // Filter out fencers who are already in the session as attendees
     const availableFencers = (fencers?.items || []).filter((f: Fencer) => !attendees?.some(a => a.id === f.id));
-    // Filter out fencers who are already coaches for this session
-    const availableCoaches = (fencers?.items || []).filter((f: Fencer) => !coaches?.some(c => c.id === f.id));
+    // Filter out fencers who are already coaches for this session, and only show those who have a coach role
+    const availableCoaches = (fencers?.items || []).filter((f: Fencer) => f.coach_role !== 'NONE' && !coaches?.some(c => c.id === f.id));
 
     const handleAdd = async (fencerId: string) => {
         if (!session.id) return;

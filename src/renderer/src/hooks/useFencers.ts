@@ -40,7 +40,8 @@ export const useCreateFencer = () => {
                     last_membership_renewal: fencer.last_membership_renewal,
                     is_foil: fencer.is_foil,
                     is_epee: fencer.is_epee,
-                    is_saber: fencer.is_saber
+                    is_saber: fencer.is_saber,
+                    coach_role: fencer.coach_role
                 })
                 .select('id')
                 .single();
@@ -71,7 +72,8 @@ export const useUpdateFencer = () => {
                     last_membership_renewal: fencer.last_membership_renewal,
                     is_foil: fencer.is_foil,
                     is_epee: fencer.is_epee,
-                    is_saber: fencer.is_saber
+                    is_saber: fencer.is_saber,
+                    coach_role: fencer.coach_role
                 })
                 .eq('id', fencer.id);
             if (error) throw error;

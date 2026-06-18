@@ -9,6 +9,7 @@ export interface Fencer {
     is_foil: boolean;
     is_epee: boolean;
     is_saber: boolean;
+    coach_role: 'NONE' | 'TEMPORARY' | 'FULL';
     fraction?: number;
 }
 

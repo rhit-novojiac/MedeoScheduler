@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Pencil, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Fencer } from '@preload/index';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -50,6 +51,7 @@ const FencerRowActions = ({ fencer, onUpdate }: { fencer: Fencer; onUpdate: (dat
     const [isFoil, setIsFoil] = useState(!!fencer.is_foil);
     const [isEpee, setIsEpee] = useState(!!fencer.is_epee);
     const [isSaber, setIsSaber] = useState(!!fencer.is_saber);
+    const [coachRole, setCoachRole] = useState<'NONE' | 'TEMPORARY' | 'FULL'>(fencer.coach_role || 'NONE');
 
     useEffect(() => {
         if (!editOpen) return;
@@ -62,6 +64,7 @@ const FencerRowActions = ({ fencer, onUpdate }: { fencer: Fencer; onUpdate: (dat
         setIsFoil(!!fencer.is_foil);
         setIsEpee(!!fencer.is_epee);
         setIsSaber(!!fencer.is_saber);
+        setCoachRole(fencer.coach_role || 'NONE');
     }, [editOpen, fencer]);
 
     const handleUpdate = async (e: React.FormEvent) => {
@@ -76,7 +79,8 @@ const FencerRowActions = ({ fencer, onUpdate }: { fencer: Fencer; onUpdate: (dat
             last_membership_renewal: lastMembershipRenewal || null,
             is_foil: isFoil,
             is_epee: isEpee,
-            is_saber: isSaber
+            is_saber: isSaber,
+            coach_role: coachRole
         });
         setEditOpen(false);
     };
@@ -129,6 +133,21 @@ const FencerRowActions = ({ fencer, onUpdate }: { fencer: Fencer; onUpdate: (dat
                             <Label htmlFor="renewalEdit" className="text-right">Renewal</Label>
                             <Input id="renewalEdit" type="date" value={lastMembershipRenewal} onChange={e => setLastMembershipRenewal(e.target.value)} className="col-span-3" />
                         </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="coachRoleEdit" className="text-right">Role</Label>
+                            <div className="col-span-3">
+                                <Select value={coachRole} onValueChange={(val: any) => setCoachRole(val)}>
+                                    <SelectTrigger id="coachRoleEdit">
+                                        <SelectValue placeholder="Select role" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="NONE">Fencer Only</SelectItem>
+                                        <SelectItem value="TEMPORARY">Temporary Coach</SelectItem>
+                                        <SelectItem value="FULL">Full Coach</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
                         <div className="grid grid-cols-4 items-center gap-4 mt-2">
                             <Label className="text-right">Weapons</Label>
                             <div className="col-span-3 flex gap-4">
@@ -178,6 +197,7 @@ export const FencersManager = () => {
     const [isSaber, setIsSaber] = useState(false);
     const [sex, setSex] = useState('M');
     const [lastMembershipRenewal, setLastMembershipRenewal] = useState('');
+    const [coachRole, setCoachRole] = useState<'NONE' | 'TEMPORARY' | 'FULL'>('NONE');
 
     const [addOpen, setAddOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -193,11 +213,12 @@ export const FencersManager = () => {
             last_membership_renewal: lastMembershipRenewal || null,
             is_foil: isFoil,
             is_epee: isEpee,
-            is_saber: isSaber
+            is_saber: isSaber,
+            coach_role: coachRole
         });
         setAddOpen(false);
         // Reset
-        setFirstName(''); setLastName(''); setYearOfBirth(''); setUsafId(''); setLastMembershipRenewal('');
+        setFirstName(''); setLastName(''); setYearOfBirth(''); setUsafId(''); setLastMembershipRenewal(''); setCoachRole('NONE');
     };
 
     // Filtering logic (client-side filter on current page only for now, 
@@ -272,6 +293,21 @@ export const FencersManager = () => {
                                         <Label htmlFor="renew" className="text-right">Renewal</Label>
                                         <Input id="renew" type="date" value={lastMembershipRenewal} onChange={e => setLastMembershipRenewal(e.target.value)} className="col-span-3" />
                                     </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="coachRoleAdd" className="text-right">Role</Label>
+                                        <div className="col-span-3">
+                                            <Select value={coachRole} onValueChange={(val: any) => setCoachRole(val)}>
+                                                <SelectTrigger id="coachRoleAdd">
+                                                    <SelectValue placeholder="Select role" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="NONE">Fencer Only</SelectItem>
+                                                    <SelectItem value="TEMPORARY">Temporary Coach</SelectItem>
+                                                    <SelectItem value="FULL">Full Coach</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
                                     <div className="grid grid-cols-4 items-center gap-4 mt-2">
                                         <Label className="text-right">Weapons</Label>
                                         <div className="col-span-3 flex gap-4">
@@ -310,6 +346,7 @@ export const FencersManager = () => {
                             <TableHeader className="bg-muted/30 sticky top-0 z-10 backdrop-blur-sm">
                                 <TableRow>
                                     <TableHead>Name</TableHead>
+                                    <TableHead>Role</TableHead>
                                     <TableHead>Sex</TableHead>
                                     <TableHead>YOB</TableHead>
                                     <TableHead>USAF ID</TableHead>
@@ -322,6 +359,11 @@ export const FencersManager = () => {
                                 {filteredFencers.map(f => (
                                     <TableRow key={f.id} className="hover:bg-muted/5">
                                         <TableCell className="font-medium">{f.first_name} {f.last_name}</TableCell>
+                                        <TableCell>
+                                            {f.coach_role === 'FULL' && <Badge className="bg-violet-500/10 text-violet-600 dark:text-violet-400 hover:bg-violet-500/20 border-violet-500/20 text-[10px] px-2 py-0.5">Coach</Badge>}
+                                            {f.coach_role === 'TEMPORARY' && <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 border-amber-500/20 text-[10px] px-2 py-0.5">Temp Coach</Badge>}
+                                            {(!f.coach_role || f.coach_role === 'NONE') && <span className="text-xs text-muted-foreground">Fencer</span>}
+                                        </TableCell>
                                         <TableCell>{f.sex || '—'}</TableCell>
                                         <TableCell>{f.year_of_birth}</TableCell>
                                         <TableCell className="font-mono text-xs">{f.usaf_id}</TableCell>
