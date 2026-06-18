@@ -206,18 +206,15 @@ const TemplateRowActions = ({ template, onUpdate, onDelete }: { template: ClassT
 };
 
 export const ClassTemplatesManager = () => {
-    const [currentPage, setCurrentPage] = useState(1);
-    const pageSize = 12;
-
-    const { data: templatesData, isLoading, isError } = useClassTemplates(currentPage, pageSize);
+    const { data: templatesData, isLoading, isError } = useClassTemplates();
     const templates = templatesData?.items ?? [];
-    const totalTemplates = templatesData?.total ?? 0;
 
     const { data: classTypes } = useClassTypes();
     const createTemplate = useCreateClassTemplate();
     const updateTemplate = useUpdateClassTemplate();
     const deleteTemplate = useDeleteClassTemplate();
 
+    const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay());
     const [open, setOpen] = useState(false);
     const [name, setName] = useState('');
     const [typeId, setTypeId] = useState('');
@@ -226,6 +223,17 @@ export const ClassTemplatesManager = () => {
     const [duration, setDuration] = useState('60');
     const [description, setDescription] = useState('');
     const [weapon, setWeapon] = useState('none');
+
+    // Automatically set the typeId and dayOfWeek when dialog opens/data loads
+    useEffect(() => {
+        if (classTypes && classTypes.length > 0 && !typeId) {
+            setTypeId(classTypes[0].id.toString());
+        }
+    }, [classTypes, typeId]);
+
+    useEffect(() => {
+        setDayOfWeek(selectedDay.toString());
+    }, [selectedDay, open]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -245,11 +253,11 @@ export const ClassTemplatesManager = () => {
         setWeapon('none');
     };
 
-    const totalPages = Math.ceil(totalTemplates / pageSize) || 1;
+    const dailyTemplates = templates.filter(t => t.day_of_week === selectedDay);
 
     return (
         <Card className="h-full flex flex-col shadow-sm border-border/60">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 bg-muted/20 border-b">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 bg-muted/20 border-b shrink-0">
                 <div className="space-y-1">
                     <CardTitle className="flex items-center gap-2">
                         <Clock className="w-5 h-5 text-primary" />
@@ -335,7 +343,29 @@ export const ClassTemplatesManager = () => {
                     </DialogContent>
                 </Dialog>
             </CardHeader>
-            <CardContent className="flex-1 p-0 overflow-auto">
+
+            {/* Day selector tabs */}
+            <div className="flex border-b shrink-0 bg-muted/10 overflow-x-auto">
+                {DAYS_OF_WEEK.map((day, idx) => {
+                    const isSelected = selectedDay === idx;
+                    return (
+                        <button
+                            key={day.value}
+                            type="button"
+                            onClick={() => setSelectedDay(idx)}
+                            className={`flex-1 min-w-[50px] py-2.5 text-xs font-semibold border-b-2 transition-all ${
+                                isSelected
+                                    ? 'border-primary text-primary bg-background/50'
+                                    : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/10'
+                            }`}
+                        >
+                            {day.label.slice(0, 3)}
+                        </button>
+                    );
+                })}
+            </div>
+
+            <CardContent className="flex-1 p-0 overflow-auto min-h-0">
                 {isLoading ? (
                     <div className="flex justify-center py-8"><span className="animate-pulse text-muted-foreground text-sm">Loading templates...</span></div>
                 ) : isError ? (
@@ -347,27 +377,30 @@ export const ClassTemplatesManager = () => {
                             <p className="text-xs text-amber-600 dark:text-amber-500">You must create a Class Type first.</p>
                         )}
                     </div>
+                ) : dailyTemplates.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center p-12 text-center gap-2">
+                        <Clock className="w-8 h-8 text-muted-foreground/30 stroke-[1.5]" />
+                        <p className="text-muted-foreground text-sm italic">No classes scheduled for {DAYS_OF_WEEK[selectedDay].label}.</p>
+                    </div>
                 ) : (
                     <Table>
                         <TableHeader className="bg-muted/30 sticky top-0 backdrop-blur-md">
                             <TableRow>
-                                <TableHead>Day</TableHead>
                                 <TableHead>Time</TableHead>
                                 <TableHead>Class</TableHead>
                                 <TableHead className="w-[60px]"></TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {templates.map(t => (
+                            {dailyTemplates.map(t => (
                                 <TableRow key={t.id} className="hover:bg-muted/10">
-                                    <TableCell className="font-medium">{DAYS_OF_WEEK.find(d => d.value === t.day_of_week.toString())?.label}</TableCell>
-                                    <TableCell className="text-muted-foreground whitespace-nowrap">
+                                    <TableCell className="text-muted-foreground whitespace-nowrap font-medium text-xs">
                                         {formatTime(t.start_time)} <br />
-                                        <span className="text-xs opacity-70">{t.duration_minutes}m</span>
+                                        <span className="text-[10px] opacity-70">{t.duration_minutes}m</span>
                                     </TableCell>
                                     <TableCell className="min-w-0">
                                         <div className="flex items-center gap-2">
-                                            <div className="font-medium text-foreground break-words">{t.name}</div>
+                                            <div className="font-semibold text-foreground text-sm break-words">{t.name}</div>
                                             {getWeaponBadge(t.weapon)}
                                         </div>
                                         <div className="text-xs text-muted-foreground truncate">{t.class_type_name}</div>
@@ -385,35 +418,6 @@ export const ClassTemplatesManager = () => {
                     </Table>
                 )}
             </CardContent>
-
-            <div className="border-t bg-muted/20 px-4 py-3 flex items-center justify-between shrink-0">
-                <div className="text-xs text-muted-foreground font-medium">
-                    Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalTemplates)} of {totalTemplates}
-                </div>
-                <div className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground">Page {currentPage} / {totalPages}</span>
-                    <div className="flex gap-1">
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            disabled={currentPage === 1}
-                            onClick={() => setCurrentPage(p => p - 1)}
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            disabled={currentPage >= totalPages}
-                            onClick={() => setCurrentPage(p => p + 1)}
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                    </div>
-                </div>
-            </div>
         </Card>
     );
 };
