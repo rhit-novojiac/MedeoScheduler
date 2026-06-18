@@ -14,6 +14,7 @@ import { MoreHorizontal, Pencil, Trash, Clock, ChevronLeft, ChevronRight } from 
 import { formatTime } from '@/lib/utils';
 import type { ClassTemplate } from '@preload/index';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { Badge } from '@/components/ui/badge';
 
 const DAYS_OF_WEEK = [
     { value: '0', label: 'Sunday' },
