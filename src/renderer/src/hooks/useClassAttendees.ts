@@ -11,6 +11,7 @@ export const useAttendeesForSession = (sessionId: string | null) => {
                 .from('class_attendees')
                 .select(`
                     fraction,
+                    minutes_missed,
                     fencers (*)
                 `)
                 .eq('class_session_id', sessionId);
@@ -21,7 +22,8 @@ export const useAttendeesForSession = (sessionId: string | null) => {
                     if (!att.fencers) return null;
                     return {
                         ...att.fencers,
-                        fraction: att.fraction
+                        fraction: att.fraction,
+                        minutes_missed: att.minutes_missed
                     };
                 })
                 .filter(Boolean) as Fencer[];
@@ -33,13 +35,14 @@ export const useAttendeesForSession = (sessionId: string | null) => {
 export const useAddAttendee = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async ({ sessionId, fencerId, fraction }: { sessionId: string; fencerId: string; fraction?: number; date?: string }) => {
+        mutationFn: async ({ sessionId, fencerId, fraction, minutesMissed }: { sessionId: string; fencerId: string; fraction?: number; minutesMissed?: number; date?: string }) => {
             const { error } = await supabase
                 .from('class_attendees')
                 .upsert({
                     class_session_id: sessionId,
                     fencer_id: fencerId,
-                    fraction: fraction ?? 1.0
+                    fraction: fraction ?? 1.0,
+                    minutes_missed: minutesMissed ?? 0
                 }, { onConflict: 'class_session_id,fencer_id' });
             if (error) throw error;
             return true;
@@ -56,6 +59,7 @@ export const useAddAttendee = () => {
         },
     });
 };
+
 
 export const useRemoveAttendee = () => {
     const queryClient = useQueryClient();

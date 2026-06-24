@@ -93,6 +93,7 @@ CREATE TABLE IF NOT EXISTS class_attendees (
     class_session_id UUID REFERENCES class_sessions(id) ON DELETE CASCADE,
     fencer_id UUID REFERENCES fencers(id) ON DELETE CASCADE,
     fraction REAL NOT NULL DEFAULT 1.0,
+    minutes_missed INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (class_session_id, fencer_id)
 );
 
@@ -138,3 +139,53 @@ ALTER TABLE class_coaches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE class_attendees ENABLE ROW LEVEL SECURITY;
 ALTER TABLE special_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE private_lessons ENABLE ROW LEVEL SECURITY;
+
+-- ==========================================
+-- 8. Fencer Memberships
+-- ==========================================
+CREATE TABLE IF NOT EXISTS fencer_memberships (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    fencer_id UUID NOT NULL REFERENCES fencers(id) ON DELETE CASCADE,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('MONTHLY', 'YEARLY')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TRIGGER update_fencer_memberships_modtime BEFORE UPDATE ON fencer_memberships FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+
+-- ==========================================
+-- 9. Fencer Billings
+-- ==========================================
+CREATE TABLE IF NOT EXISTS fencer_billings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    fencer_id UUID NOT NULL REFERENCES fencers(id) ON DELETE CASCADE,
+    amount NUMERIC(10, 2) NOT NULL,
+    status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'PAID', 'CANCELLED')),
+    billing_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TRIGGER update_fencer_billings_modtime BEFORE UPDATE ON fencer_billings FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+
+-- ==========================================
+-- 10. Billing Items
+-- ==========================================
+CREATE TABLE IF NOT EXISTS billing_items (
+    billing_id UUID NOT NULL REFERENCES fencer_billings(id) ON DELETE CASCADE,
+    class_session_id UUID NOT NULL REFERENCES class_sessions(id) ON DELETE CASCADE,
+    fencer_id UUID NOT NULL REFERENCES fencers(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    PRIMARY KEY (billing_id, class_session_id)
+);
+
+ALTER TABLE fencer_memberships ENABLE ROW LEVEL SECURITY;
+ALTER TABLE fencer_billings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE billing_items ENABLE ROW LEVEL SECURITY;
+
+-- Permissive RLS Policies (Allow all)
+CREATE POLICY "Allow all fencer_memberships" ON fencer_memberships FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all fencer_billings" ON fencer_billings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all billing_items" ON billing_items FOR ALL USING (true) WITH CHECK (true);

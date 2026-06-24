@@ -8,9 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Pencil, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MoreHorizontal, Pencil, Search, ChevronLeft, ChevronRight, User } from 'lucide-react';
 import type { Fencer } from '@preload/index';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FencerAccountDialog } from './FencerAccountDialog';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -42,6 +43,7 @@ const SexToggle = ({ value, onChange }: { value: string; onChange: (v: string) =
 
 const FencerRowActions = ({ fencer, onUpdate }: { fencer: Fencer; onUpdate: (data: Fencer) => Promise<unknown> }) => {
     const [editOpen, setEditOpen] = useState(false);
+    const [accountOpen, setAccountOpen] = useState(false);
     const [firstName, setFirstName] = useState(fencer.first_name);
     const [lastName, setLastName] = useState(fencer.last_name);
     const [yearOfBirth, setYearOfBirth] = useState(fencer.year_of_birth.toString());
@@ -86,91 +88,104 @@ const FencerRowActions = ({ fencer, onUpdate }: { fencer: Fencer; onUpdate: (dat
     };
 
     return (
-        <Dialog open={editOpen} onOpenChange={setEditOpen}>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                    <DialogTrigger asChild>
-                        <DropdownMenuItem className="cursor-pointer">
-                            <Pencil className="mr-2 h-4 w-4" /> Edit
-                        </DropdownMenuItem>
-                    </DialogTrigger>
-                </DropdownMenuContent>
-            </DropdownMenu>
+        <>
+            <FencerAccountDialog
+                fencer={fencer}
+                open={accountOpen}
+                onOpenChange={setAccountOpen}
+                onUpdateFencer={onUpdate}
+            />
 
-            <DialogContent className="sm:max-w-[425px]">
-                <form onSubmit={handleUpdate}>
-                    <DialogHeader>
-                        <DialogTitle>Edit Fencer</DialogTitle>
-                        <DialogDescription>Update the fencer's details below.</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="firstNameEdit" className="text-right">First Name</Label>
-                            <Input id="firstNameEdit" value={firstName} onChange={e => setFirstName(e.target.value)} className="col-span-3" required />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="lastNameEdit" className="text-right">Last Name</Label>
-                            <Input id="lastNameEdit" value={lastName} onChange={e => setLastName(e.target.value)} className="col-span-3" required />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="usafIdEdit" className="text-right">USAF ID</Label>
-                            <Input id="usafIdEdit" type="number" value={usafId} onChange={e => setUsafId(e.target.value)} className="col-span-3" required />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="yobEdit" className="text-right">Birth Year</Label>
-                            <Input id="yobEdit" type="number" value={yearOfBirth} onChange={e => setYearOfBirth(e.target.value)} className="col-span-3" required />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right">Sex</Label>
-                            <SexToggle value={sex} onChange={setSex} />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="renewalEdit" className="text-right">Renewal</Label>
-                            <Input id="renewalEdit" type="date" value={lastMembershipRenewal} onChange={e => setLastMembershipRenewal(e.target.value)} className="col-span-3" />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="coachRoleEdit" className="text-right">Role</Label>
-                            <div className="col-span-3">
-                                <Select value={coachRole} onValueChange={(val: any) => setCoachRole(val)}>
-                                    <SelectTrigger id="coachRoleEdit">
-                                        <SelectValue placeholder="Select role" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="NONE">Fencer Only</SelectItem>
-                                        <SelectItem value="TEMPORARY">Temporary Coach</SelectItem>
-                                        <SelectItem value="FULL">Full Coach</SelectItem>
-                                    </SelectContent>
-                                </Select>
+            <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem className="cursor-pointer" onClick={() => setAccountOpen(true)}>
+                            <User className="mr-2 h-4 w-4" /> Fencer Account
+                        </DropdownMenuItem>
+                        <DialogTrigger asChild>
+                            <DropdownMenuItem className="cursor-pointer">
+                                <Pencil className="mr-2 h-4 w-4" /> Quick Edit
+                            </DropdownMenuItem>
+                        </DialogTrigger>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DialogContent className="sm:max-w-[425px]">
+                    <form onSubmit={handleUpdate}>
+                        <DialogHeader>
+                            <DialogTitle>Edit Fencer</DialogTitle>
+                            <DialogDescription>Update the fencer's details below.</DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="firstNameEdit" className="text-right">First Name</Label>
+                                <Input id="firstNameEdit" value={firstName} onChange={e => setFirstName(e.target.value)} className="col-span-3" required />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="lastNameEdit" className="text-right">Last Name</Label>
+                                <Input id="lastNameEdit" value={lastName} onChange={e => setLastName(e.target.value)} className="col-span-3" required />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="usafIdEdit" className="text-right">USAF ID</Label>
+                                <Input id="usafIdEdit" type="number" value={usafId} onChange={e => setUsafId(e.target.value)} className="col-span-3" required />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="yobEdit" className="text-right">Birth Year</Label>
+                                <Input id="yobEdit" type="number" value={yearOfBirth} onChange={e => setYearOfBirth(e.target.value)} className="col-span-3" required />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right">Sex</Label>
+                                <SexToggle value={sex} onChange={setSex} />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="renewalEdit" className="text-right">Renewal</Label>
+                                <Input id="renewalEdit" type="date" value={lastMembershipRenewal} onChange={e => setLastMembershipRenewal(e.target.value)} className="col-span-3" />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="coachRoleEdit" className="text-right">Role</Label>
+                                <div className="col-span-3">
+                                    <Select value={coachRole} onValueChange={(val: any) => setCoachRole(val)}>
+                                        <SelectTrigger id="coachRoleEdit">
+                                            <SelectValue placeholder="Select role" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="NONE">Fencer Only</SelectItem>
+                                            <SelectItem value="TEMPORARY">Temporary Coach</SelectItem>
+                                            <SelectItem value="FULL">Full Coach</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4 mt-2">
+                                <Label className="text-right">Weapons</Label>
+                                <div className="col-span-3 flex gap-4">
+                                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                                        <input type="checkbox" checked={isFoil} onChange={e => setIsFoil(e.target.checked)} className="cursor-pointer" /> Foil
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                                        <input type="checkbox" checked={isEpee} onChange={e => setIsEpee(e.target.checked)} className="cursor-pointer" /> Epee
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                                        <input type="checkbox" checked={isSaber} onChange={e => setIsSaber(e.target.checked)} className="cursor-pointer" /> Saber
+                                    </label>
+                                </div>
                             </div>
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4 mt-2">
-                            <Label className="text-right">Weapons</Label>
-                            <div className="col-span-3 flex gap-4">
-                                <label className="flex items-center gap-2 cursor-pointer select-none">
-                                    <input type="checkbox" checked={isFoil} onChange={e => setIsFoil(e.target.checked)} className="cursor-pointer" /> Foil
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer select-none">
-                                    <input type="checkbox" checked={isEpee} onChange={e => setIsEpee(e.target.checked)} className="cursor-pointer" /> Epee
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer select-none">
-                                    <input type="checkbox" checked={isSaber} onChange={e => setIsSaber(e.target.checked)} className="cursor-pointer" /> Saber
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button type="submit">Save Changes</Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
+                        <DialogFooter>
+                            <Button type="submit">Save Changes</Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 };
+
 
 // ---------------------------------------------------------------------------
 // Fencers Manager (Main)

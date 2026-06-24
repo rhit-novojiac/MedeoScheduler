@@ -11,6 +11,34 @@ export interface Fencer {
     is_saber: boolean;
     coach_role: 'NONE' | 'TEMPORARY' | 'FULL';
     fraction?: number;
+    minutes_missed?: number;
+}
+
+export interface FencerMembership {
+    id: string;
+    fencer_id: string;
+    start_date: string;
+    end_date: string;
+    type: 'MONTHLY' | 'YEARLY';
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface FencerBilling {
+    id: string;
+    fencer_id: string;
+    amount: number;
+    status: 'PENDING' | 'PAID' | 'CANCELLED';
+    billing_date: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface BillingItem {
+    billing_id: string;
+    class_session_id: string;
+    fencer_id: string;
+    created_at?: string;
 }
 
 export interface ClassSession {

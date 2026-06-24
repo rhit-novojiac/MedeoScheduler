@@ -77,6 +77,18 @@ export const KioskLayout = () => {
     const [isVerifying, setIsVerifying] = useState(false);
     const navigate = useNavigate();
 
+    // Minutes missed custom signup states
+    const [customMinutesOpen, setCustomMinutesOpen] = useState(false);
+    const [minutesMissedInput, setMinutesMissedInput] = useState('');
+
+    useEffect(() => {
+        if (!dialogOpen) {
+            setCustomMinutesOpen(false);
+            setMinutesMissedInput('');
+        }
+    }, [dialogOpen]);
+
+
     // 10-second auto-timeout for active sessions
     useEffect(() => {
         if (!sessionFencer) return;
@@ -182,11 +194,11 @@ export const KioskLayout = () => {
         setDialogOpen(true);
     };
 
-    const handleSignIn = async (fencerId: string, fencerName: string, fraction: number, customSession?: ClassSession) => {
+    const handleSignIn = async (fencerId: string, fencerName: string, fraction: number, minutesMissed?: number, customSession?: ClassSession) => {
         const targetSession = customSession || selectedSession;
         if (!targetSession?.id) return;
 
-        await addAttendee.mutateAsync({ sessionId: targetSession.id, fencerId, fraction, date: todayStr });
+        await addAttendee.mutateAsync({ sessionId: targetSession.id, fencerId, fraction, minutesMissed, date: todayStr });
 
         const className = targetSession.template_name || targetSession.name || 'Class';
         setSessionRegistrations(prev => [...prev, { className, fraction }]);
@@ -194,6 +206,7 @@ export const KioskLayout = () => {
         setRegisteredSessionIds(prev => [...prev, targetSession.id]);
         setShowConfirmView(true);
     };
+
 
 
     // Filter out fencers who already signed in for the active card
@@ -382,7 +395,7 @@ export const KioskLayout = () => {
                                                 key={session.id}
                                                 onClick={async () => {
                                                     if (isOpenBouting(session.name, session.template_name) && selectedFencer) {
-                                                        await handleSignIn(selectedFencer.id, selectedFencer.name, 1.0, session);
+                                                        await handleSignIn(selectedFencer.id, selectedFencer.name, 1.0, 0, session);
                                                     } else {
                                                         setSelectedSession(session);
                                                         setShowConfirmView(false);
@@ -450,15 +463,16 @@ export const KioskLayout = () => {
                                         <CommandItem
                                             key={fencer.id}
                                             value={`${fencer.last_name} ${fencer.first_name}`}
-                                            onSelect={async () => {
+                                            onSelect={() => {
                                                 const fName = `${fencer.first_name} ${fencer.last_name}`;
                                                 if (isOpenBouting(selectedSession?.name, selectedSession?.template_name)) {
-                                                    await handleSignIn(fencer.id, fName, 1.0);
+                                                    handleSignIn(fencer.id, fName, 1.0, 0);
                                                 } else {
                                                     setSelectedFencer({ id: fencer.id, name: fName });
                                                 }
                                             }}
                                             className="cursor-pointer text-2xl py-6 px-6 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors mb-1"
+
                                         >
                                             <div className="flex justify-between items-center w-full">
                                                 <span>
@@ -470,34 +484,72 @@ export const KioskLayout = () => {
                                 </CommandGroup>
                             </CommandList>
                         </Command>
+                    ) : customMinutesOpen ? (
+                        <div className="p-8 space-y-6 bg-background">
+                            <h3 className="text-xl font-bold">Minutes Missed</h3>
+                            <p className="text-muted-foreground text-sm">
+                                This class is <strong>{selectedSession?.duration_minutes} minutes</strong> long.
+                                Please enter how many minutes you missed:
+                            </p>
+                            <div className="flex items-center gap-4">
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    max={selectedSession?.duration_minutes || 120}
+                                    placeholder="0"
+                                    value={minutesMissedInput}
+                                    onChange={(e) => setMinutesMissedInput(e.target.value)}
+                                    className="text-2xl h-14 text-center font-mono"
+                                    autoFocus
+                                />
+                                <span className="text-lg font-semibold text-muted-foreground">minutes</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 pt-4">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setCustomMinutesOpen(false);
+                                        setMinutesMissedInput('');
+                                    }}
+                                    className="h-14 text-lg"
+                                >
+                                    Go Back
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={async () => {
+                                        const duration = selectedSession?.duration_minutes || 120;
+                                        const val = Math.max(0, Math.min(duration, parseInt(minutesMissedInput) || 0));
+                                        const fraction = (duration - val) / duration;
+                                        const roundedFraction = Math.round(fraction * 10000) / 10000;
+                                        await handleSignIn(selectedFencer.id, selectedFencer.name, roundedFraction, val);
+                                        setCustomMinutesOpen(false);
+                                        setMinutesMissedInput('');
+                                    }}
+                                    className="h-14 text-lg font-bold"
+                                    disabled={!minutesMissedInput}
+                                >
+                                    Confirm & Sign In
+                                </Button>
+                            </div>
+                        </div>
                     ) : (
                         <div className="p-8 space-y-6 bg-background">
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="flex flex-col gap-4">
                                 <button
-                                    onClick={() => handleSignIn(selectedFencer.id, selectedFencer.name, 1.0)}
-                                    className="h-20 rounded-2xl bg-primary text-primary-foreground hover:bg-primary/95 flex flex-col items-center justify-center transition-colors shadow-lg border border-primary/20 cursor-pointer"
+                                    onClick={() => handleSignIn(selectedFencer.id, selectedFencer.name, 1.0, 0)}
+                                    className="h-24 rounded-2xl bg-primary text-primary-foreground hover:bg-primary/95 flex flex-col items-center justify-center transition-colors shadow-lg border border-primary/20 cursor-pointer"
                                 >
-                                    <span className="text-2xl font-black">Whole Class</span>
+                                    <span className="text-2xl font-black">I Attended Whole Class</span>
+                                    <span className="text-sm opacity-80 mt-1">({selectedSession?.duration_minutes} minutes)</span>
                                 </button>
                                 <button
-                                    onClick={() => handleSignIn(selectedFencer.id, selectedFencer.name, 0.67)}
-                                    className="h-20 rounded-2xl bg-secondary text-secondary-foreground hover:bg-secondary/80 flex flex-col items-center justify-center transition-colors shadow-lg border border-border/50 cursor-pointer"
+                                    onClick={() => setCustomMinutesOpen(true)}
+                                    className="h-20 rounded-2xl bg-secondary text-secondary-foreground hover:bg-secondary/85 flex flex-col items-center justify-center transition-colors shadow-lg border border-border/50 cursor-pointer"
                                 >
-                                    <span className="text-2xl font-black">2/3 Class</span>
-                                </button>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4 pt-2">
-                                <button
-                                    onClick={() => handleSignIn(selectedFencer.id, selectedFencer.name, 0.50)}
-                                    className="h-14 rounded-xl bg-muted/45 hover:bg-muted/75 text-foreground flex flex-col items-center justify-center transition-colors border border-border/50 cursor-pointer"
-                                >
-                                    <span className="text-lg font-bold">1/2 Class</span>
-                                </button>
-                                <button
-                                    onClick={() => handleSignIn(selectedFencer.id, selectedFencer.name, 0.33)}
-                                    className="h-14 rounded-xl bg-muted/45 hover:bg-muted/75 text-foreground flex flex-col items-center justify-center transition-colors border border-border/50 cursor-pointer"
-                                >
-                                    <span className="text-lg font-bold">1/3 Class</span>
+                                    <span className="text-xl font-bold">I Missed Part of Class</span>
+                                    <span className="text-xs opacity-75 mt-0.5">Enter exact minutes missed</span>
                                 </button>
                             </div>
 

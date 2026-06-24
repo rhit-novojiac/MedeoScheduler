@@ -232,32 +232,47 @@ export const AttendanceSheet = ({ session, open, onOpenChange }: AttendanceSheet
                                         <div className="flex flex-col gap-1">
                                             <div className="font-medium text-sm">{a.last_name}, {a.first_name}</div>
                                             <div className="text-xs text-muted-foreground">
-                                                {isOpenBouting(session.name, session.template_name) ? 'Open Bouting Attendance' : `Participation: ${a.fraction === 1.0 ? 'Whole' : a.fraction === 0.67 ? '2/3' : a.fraction === 0.50 ? '1/2' : '1/3'} Class`}
+                                                {isOpenBouting(session.name, session.template_name)
+                                                    ? 'Open Bouting Attendance'
+                                                    : (a.minutes_missed && a.minutes_missed > 0)
+                                                        ? `Missed ${a.minutes_missed}m of ${session.duration_minutes}m`
+                                                        : 'Full Class'}
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {isOpenBouting(session.name, session.template_name) ? (
                                                 <span className="text-xs font-semibold bg-muted text-muted-foreground px-2.5 py-1 rounded border">Whole Class</span>
                                             ) : (
-                                                <select
-                                                    value={a.fraction ?? 1.0}
-                                                    onChange={async (e) => {
-                                                        const fraction = parseFloat(e.target.value);
-                                                        await addAttendee.mutateAsync({ sessionId: session.id, fencerId: a.id, fraction });
-                                                    }}
-                                                    className="bg-background text-foreground border border-border/50 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer font-medium"
-                                                >
-                                                    <option value="1" className="bg-background text-foreground">Whole Class</option>
-                                                    <option value="0.67" className="bg-background text-foreground">2/3 Class</option>
-                                                    <option value="0.5" className="bg-background text-foreground">1/2 Class</option>
-                                                    <option value="0.33" className="bg-background text-foreground">1/3 Class</option>
-                                                </select>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-xs text-muted-foreground">Missed:</span>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        max={session.duration_minutes}
+                                                        value={a.minutes_missed ?? 0}
+                                                        onChange={async (e) => {
+                                                            const val = Math.max(0, Math.min(session.duration_minutes, parseInt(e.target.value) || 0));
+                                                            const fraction = (session.duration_minutes - val) / session.duration_minutes;
+                                                            const roundedFraction = Math.round(fraction * 10000) / 10000;
+                                                            await addAttendee.mutateAsync({
+                                                                sessionId: session.id,
+                                                                fencerId: a.id,
+                                                                fraction: roundedFraction,
+                                                                minutesMissed: val,
+                                                                date: session.date
+                                                            });
+                                                        }}
+                                                        className="w-14 bg-background text-foreground border border-border/50 rounded px-1.5 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-primary font-mono"
+                                                    />
+                                                    <span className="text-[10px] text-muted-foreground">min</span>
+                                                </div>
                                             )}
                                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleRemove(a.id)}>
                                                 <X className="w-4 h-4" />
                                             </Button>
                                         </div>
                                     </div>
+
                                 ))}
                             </div>
                         )}
